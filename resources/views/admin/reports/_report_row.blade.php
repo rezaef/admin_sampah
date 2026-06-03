@@ -5,7 +5,6 @@
                 src="{{ $report->image_url }}"
                 class="report-image"
                 alt="Foto laporan"
-                title="{{ $report->image_path }}"
                 onclick="openLightbox(this.src)"
                 onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"
             >
