@@ -1,0 +1,33 @@
+name: Deploy ke cPanel
+
+on:
+  push:
+    branches:
+      - main # Ubah ke 'master' jika branch utamamu bernama master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚚 Checkout Kode Terbaru
+      uses: actions/checkout@v4
+
+    - name: ⚙️ Setup PHP 8.3
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3' # Sesuai dengan log error cPanel kamu
+
+    - name: 📦 Install Dependencies (Composer)
+      run: composer install --no-dev --optimize-autoloader
+
+    - name: 🚀 Upload ke cPanel via SSH/Rsync
+      uses: easingthemes/ssh-deploy@main
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        ARGS: "-avzr --delete"
+        REMOTE_HOST: ${{ secrets.SSH_HOST }}
+        REMOTE_USER: ${{ secrets.SSH_USERNAME }}
+        REMOTE_PORT: ${{ secrets.SSH_PORT }}
+        TARGET: "/home/itanisar/sampahdetector.my.id/" # Path di cPanel
+        EXCLUDE: "/.git/, /node_modules/, /.env" # Jangan timpa .env di server
