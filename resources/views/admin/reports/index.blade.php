@@ -230,7 +230,7 @@
 
 {{-- Lightbox --}}
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-    <span class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('open')">×</span>
+    <span class="lightbox-close" onclick="closeLightbox(event)">×</span>
     <img id="lightbox-img" src="" alt="Foto laporan">
 </div>
 
@@ -242,13 +242,15 @@
 function openLightbox(src) {
     document.getElementById('lightbox-img').src = src;
     document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
 }
 function closeLightbox(e) {
-    if (e.target === document.getElementById('lightbox')) {
+    if (e === undefined || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
         document.getElementById('lightbox').classList.remove('open');
+        document.body.style.overflow = '';
     }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('lightbox').classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // ── Filter Tabs ──
 let activeStatus = '';
