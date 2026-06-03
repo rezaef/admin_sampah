@@ -302,8 +302,8 @@
         <div class="stats-group-header">
             <span class="stats-group-icon">👥</span>
             <div>
-                <div class="stats-group-title">Kependudukan & Akses</div>
-                <div class="stats-group-sub">Manajemen status akun dan hak akses pengguna</div>
+                <div class="stats-group-title">Pengguna & Hak Akses</div>
+                <div class="stats-group-sub">Manajemen status akun pengguna dan hak akses administrator</div>
             </div>
         </div>
         <div class="grid-2">
