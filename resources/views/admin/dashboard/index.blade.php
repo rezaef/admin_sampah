@@ -8,7 +8,7 @@
     .chart-wrap {
         position: relative;
         flex: 1;
-        min-height: 250px;
+        min-height: 330px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -19,8 +19,8 @@
         transform: translate(-50%, -50%);
         text-align: center; pointer-events: none;
     }
-    .donut-center .val { font-size: 32px; font-weight: 900; color: var(--text); line-height: 1.1; }
-    .donut-center .lbl { font-size: 12px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .donut-center .val { font-size: 40px; font-weight: 900; color: var(--text); line-height: 1.1; }
+    .donut-center .lbl { font-size: 13px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; justify-content: center; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -404,7 +404,7 @@
             </div>
         </div>
         <div class="chart-wrap">
-            <canvas id="donutChart" width="240" height="240" style="display: block; width: 240px; height: 240px;"
+            <canvas id="donutChart" width="320" height="320" style="display: block; width: 320px; height: 320px;"
                     data-organic-avg="{{ number_format($stats['organic_avg_confidence'] * 100, 1) }}"
                     data-anorganic-avg="{{ number_format($stats['anorganic_avg_confidence'] * 100, 1) }}"
                     data-other-avg="{{ number_format($stats['other_avg_confidence'] * 100, 1) }}"></canvas>
@@ -569,8 +569,8 @@
     function drawDonut() {
         const activeSegments = segments.filter(s => s.value > 0);
         const totalVal = activeSegments.reduce((sum, s) => sum + s.value, 0) || 1;
-        const cx = 120, cy = 120, r = 62;
-        ctx.clearRect(0, 0, 240, 240);
+        const cx = 160, cy = 160, r = 82;
+        ctx.clearRect(0, 0, 320, 320);
 
         let start = -Math.PI / 2;
         activeSegments.forEach(seg => {
@@ -578,8 +578,8 @@
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             
-            // Interpolate radius between 96 (normal) and 104 (hovered) based on segment animation progress
-            const currentR = 96 + (8 * seg.progress);
+            // Interpolate radius between 128 (normal) and 138 (hovered) based on segment animation progress
+            const currentR = 128 + (10 * seg.progress);
             ctx.arc(cx, cy, currentR, start, start + sweep);
             
             ctx.closePath();
@@ -641,13 +641,13 @@
     let lastHoveredIndex = -1;
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = 240 / rect.width;
-        const scaleY = 240 / rect.height;
+        const scaleX = 320 / rect.width;
+        const scaleY = 320 / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
         
-        const dx = x - 120;
-        const dy = y - 120;
+        const dx = x - 160;
+        const dy = y - 160;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         let hoveredIndex = -1;
@@ -666,8 +666,8 @@
         const othSeg = segments.find(s => s.label === 'Lainnya');
         if (othSeg) othSeg.value = currentOther;
 
-        // Expanded max distance is 104, so hit test works up to 106
-        if (dist >= 62 && dist <= 106) {
+        // Expanded max distance is 138 (128+10), so hit test works up to 140
+        if (dist >= 82 && dist <= 140) {
             let angle = Math.atan2(dy, dx);
             if (angle < -Math.PI / 2) {
                 angle += 2 * Math.PI;
