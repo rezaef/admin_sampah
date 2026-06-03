@@ -199,10 +199,10 @@
             border-radius: 8px;
         }
         .stat-tile-value {
-            font-size: 20px;
+            font-size: 25px;
         }
         .stat-tile-label {
-            font-size: 9.5px;
+            font-size: 10px;
             letter-spacing: 0.5px;
         }
         .stats-group .grid-3, .stats-group .grid-2 {
