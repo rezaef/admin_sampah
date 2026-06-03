@@ -96,94 +96,133 @@
 @section('content')
 
 {{-- Filter Tabs --}}
-<div class="toolbar" style="margin-bottom:4px">
+<div class="toolbar" style="margin-bottom:12px">
     <div class="filter-tabs" id="filter-tabs">
         <button class="filter-tab active" data-status="">Semua</button>
         <button class="filter-tab" data-status="Menunggu verifikasi">⏳ Menunggu</button>
         <button class="filter-tab" data-status="Diproses">🔄 Diproses</button>
         <button class="filter-tab" data-status="Selesai">✅ Selesai</button>
     </div>
-    <div class="text-sm muted" id="report-count">{{ $reports->total() }} laporan</div>
+    <div class="text-sm muted" id="report-count">{{ $totalCount }} laporan</div>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden">
+{{-- Section 1: Urgensi Tinggi --}}
+<div class="card urgency-card tinggi-card" style="margin-bottom: 24px; border-top: 4px solid var(--danger); padding:0; overflow:hidden">
+    <div class="card-header" style="padding: 20px 20px 8px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <div class="card-title" style="display:flex; align-items:center; gap:8px; font-size:16px;">
+                <span>🔴</span> Urgensi Tinggi
+            </div>
+            <div class="card-sub">Laporan mendesak yang membutuhkan penanganan segera</div>
+        </div>
+        <span class="badge badge-danger" id="count-tinggi">{{ count($reportsTinggi) }} laporan</span>
+    </div>
     <div class="tbl-scroll">
-    <table id="reports-table" style="min-width:900px">
-        <thead>
-            <tr>
-                <th style="width:80px;padding-left:20px">Foto</th>
-                <th style="min-width:180px">Judul &amp; Pengguna</th>
-                <th style="min-width:130px">Lokasi</th>
-                <th style="min-width:130px">Kategori</th>
-                <th>Urgensi</th>
-                <th>Waktu</th>
-                <th>Status</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody id="reports-tbody">
-            @forelse($reports as $report)
-                <tr data-id="{{ $report->id }}" data-status="{{ $report->status }}" class="report-row">
-                    <td style="padding-left:20px">
-                        @if($report->image_path)
-                            <img
-                                src="{{ url('report-images/' . basename($report->image_path)) }}"
-                                class="report-image"
-                                alt="Foto laporan"
-                                onclick="openLightbox(this.src)"
-                            >
-                        @else
-                            <div class="img-placeholder">📷</div>
-                        @endif
-                    </td>
-                    <td>
-                        <div class="font-bold" style="max-width:200px">{{ $report->title }}</div>
-                        <div class="text-sm muted">{{ $report->user?->display_name ?? '-' }}</div>
-                    </td>
-                    <td class="muted text-sm" style="max-width:160px">{{ $report->location_name }}</td>
-                    <td><span class="badge badge-neutral text-sm">{{ $report->category }}</span></td>
-                    <td>
-                        <span class="badge {{ $report->urgency === 'Tinggi' ? 'urgency-high' : ($report->urgency === 'Sedang' ? 'urgency-med' : 'urgency-low') }}">
-                            {{ $report->urgency === 'Tinggi' ? '🔴' : ($report->urgency === 'Sedang' ? '🟡' : '🟢') }} {{ $report->urgency }}
-                        </span>
-                    </td>
-                    <td class="text-sm muted">{{ optional($report->reported_at)->format('d/m/Y H:i') }}</td>
-                    <td>
-                        <span class="badge {{ $report->status === 'Selesai' ? 'badge-success' : ($report->status === 'Diproses' ? 'badge-warning' : 'badge-neutral') }}" id="badge-{{ $report->id }}">
-                            {{ $report->status }}
-                        </span>
-                    </td>
-                    <td>
-                        <div style="display:flex; flex-direction:column; gap:6px; min-width:180px; padding-right:12px">
-                            <div class="inline-form" style="display:flex; gap:6px">
-                                <select class="status-select" id="sel-{{ $report->id }}" data-id="{{ $report->id }}" style="flex:1; padding: 5px 8px;">
-                                    <option value="Menunggu verifikasi" @selected($report->status === 'Menunggu verifikasi')>Menunggu</option>
-                                    <option value="Diproses" @selected($report->status === 'Diproses')>Diproses</option>
-                                    <option value="Selesai" @selected($report->status === 'Selesai')>Selesai</option>
-                                </select>
-                                <button class="save-btn" onclick="updateStatus({{ $report->id }})" style="padding: 5px 10px;">Simpan</button>
-                            </div>
-                            <form method="POST" action="{{ route('admin.reports.destroy', $report) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan ini?')" style="margin:0; width:100%">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="save-btn" style="background:#dc2626; border-color:#dc2626; width:100%; display:block; text-align:center; padding:5px 0">🗑️ Hapus Laporan</button>
-                            </form>
-                        </div>
-                    </td>
+        <table style="min-width:900px">
+            <thead>
+                <tr>
+                    <th style="width:80px;padding-left:20px">Foto</th>
+                    <th style="min-width:180px">Judul &amp; Pengguna</th>
+                    <th style="min-width:130px">Lokasi</th>
+                    <th style="min-width:130px">Kategori</th>
+                    <th>Waktu</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
                 </tr>
-            @empty
-                <tr id="empty-row">
-                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-2)">
-                        <div style="font-size:36px;margin-bottom:8px">📋</div>
-                        Belum ada laporan masuk.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-    </div>{{-- /.tbl-scroll --}}
+            </thead>
+            <tbody class="reports-tbody" id="tbody-tinggi">
+                @forelse($reportsTinggi as $report)
+                    @include('admin.reports._report_row', ['report' => $report])
+                @empty
+                    <tr class="empty-row-placeholder">
+                        <td colspan="7" style="text-align:center;padding:32px;color:var(--text-2)">
+                            <div style="font-size:28px;margin-bottom:6px">👍</div>
+                            Bagus sekali! Tidak ada laporan dengan urgensi tinggi.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 
-    <div class="pagination" style="padding:16px 20px">
-        {{ $reports->links() }}
+{{-- Section 2: Urgensi Sedang --}}
+<div class="card urgency-card sedang-card" style="margin-bottom: 24px; border-top: 4px solid var(--warning); padding:0; overflow:hidden">
+    <div class="card-header" style="padding: 20px 20px 8px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <div class="card-title" style="display:flex; align-items:center; gap:8px; font-size:16px;">
+                <span>🟡</span> Urgensi Sedang
+            </div>
+            <div class="card-sub">Laporan tingkat menengah untuk dijadwalkan tindak lanjut</div>
+        </div>
+        <span class="badge badge-warning" id="count-sedang">{{ count($reportsSedang) }} laporan</span>
+    </div>
+    <div class="tbl-scroll">
+        <table style="min-width:900px">
+            <thead>
+                <tr>
+                    <th style="width:80px;padding-left:20px">Foto</th>
+                    <th style="min-width:180px">Judul &amp; Pengguna</th>
+                    <th style="min-width:130px">Lokasi</th>
+                    <th style="min-width:130px">Kategori</th>
+                    <th>Waktu</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="reports-tbody" id="tbody-sedang">
+                @forelse($reportsSedang as $report)
+                    @include('admin.reports._report_row', ['report' => $report])
+                @empty
+                    <tr class="empty-row-placeholder">
+                        <td colspan="7" style="text-align:center;padding:32px;color:var(--text-2)">
+                            <div style="font-size:28px;margin-bottom:6px">👍</div>
+                            Tidak ada laporan dengan urgensi sedang.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{-- Section 3: Urgensi Rendah --}}
+<div class="card urgency-card rendah-card" style="margin-bottom: 24px; border-top: 4px solid var(--success); padding:0; overflow:hidden">
+    <div class="card-header" style="padding: 20px 20px 8px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <div class="card-title" style="display:flex; align-items:center; gap:8px; font-size:16px;">
+                <span>🟢</span> Urgensi Rendah
+            </div>
+            <div class="card-sub">Laporan minor atau informasi tambahan kebersihan lingkungan</div>
+        </div>
+        <span class="badge badge-success" id="count-rendah">{{ count($reportsRendah) }} laporan</span>
+    </div>
+    <div class="tbl-scroll">
+        <table style="min-width:900px">
+            <thead>
+                <tr>
+                    <th style="width:80px;padding-left:20px">Foto</th>
+                    <th style="min-width:180px">Judul &amp; Pengguna</th>
+                    <th style="min-width:130px">Lokasi</th>
+                    <th style="min-width:130px">Kategori</th>
+                    <th>Waktu</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="reports-tbody" id="tbody-rendah">
+                @forelse($reportsRendah as $report)
+                    @include('admin.reports._report_row', ['report' => $report])
+                @empty
+                    <tr class="empty-row-placeholder">
+                        <td colspan="7" style="text-align:center;padding:32px;color:var(--text-2)">
+                            <div style="font-size:28px;margin-bottom:6px">👍</div>
+                            Tidak ada laporan dengan urgensi rendah.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -231,12 +270,52 @@ if (initialStatus) {
 }
 
 function filterRows() {
-    let visible = 0;
-    document.querySelectorAll('.report-row').forEach(row => {
-        const match = !activeStatus || row.dataset.status === activeStatus;
-        row.style.display = match ? '' : 'none';
-        if (match) visible++;
+    let totalVisible = 0;
+    
+    // Loop through each table body
+    document.querySelectorAll('.reports-tbody').forEach(tbody => {
+        const rows = tbody.querySelectorAll('.report-row');
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const match = !activeStatus || row.dataset.status === activeStatus;
+            row.style.display = match ? '' : 'none';
+            if (match) {
+                visibleCount++;
+                totalVisible++;
+            }
+        });
+
+        // Hide normal empty placeholder row if it exists
+        const normalPlaceholder = tbody.querySelector('.empty-row-placeholder');
+        if (normalPlaceholder) {
+            normalPlaceholder.style.display = activeStatus ? 'none' : '';
+            if (!activeStatus) {
+                // If status is empty and we had normal placeholder, visible count is 0
+                visibleCount = 0;
+            }
+        }
+
+        // Toggle local empty row for current filter
+        let emptyRow = tbody.querySelector('.local-empty-row');
+        if (visibleCount === 0 && (!normalPlaceholder || normalPlaceholder.style.display === 'none')) {
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.className = 'local-empty-row';
+                emptyRow.innerHTML = `
+                    <td colspan="7" style="text-align:center;padding:24px;color:var(--text-3);font-weight:600;">
+                        Tidak ada laporan dengan status ini.
+                    </td>
+                `;
+                tbody.appendChild(emptyRow);
+            } else {
+                emptyRow.style.display = '';
+            }
+        } else {
+            if (emptyRow) emptyRow.style.display = 'none';
+        }
     });
+    
+    document.getElementById('report-count').textContent = totalVisible + ' laporan';
 }
 
 // ── AJAX Status Update ──
@@ -284,7 +363,7 @@ async function updateStatus(id) {
 }
 
 // ── Realtime Polling: cek laporan baru ──
-let knownIds = new Set([...document.querySelectorAll('.report-row')].map(r => r.dataset.id));
+let highestKnownId = Math.max(...[...document.querySelectorAll('.report-row')].map(r => parseInt(r.dataset.id) || 0), 0);
 
 registerPollCallback(async function() {
     try {
@@ -293,8 +372,51 @@ registerPollCallback(async function() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        document.getElementById('report-count').textContent = data.total_reports + ' laporan';
-    } catch(e) {}
+        
+        // Count total reports for visual label
+        document.getElementById('report-count').textContent = data.total_reports + ' Laporan';
+        
+        // Notify page user if there is a new report
+        if (data.recent_reports && data.recent_reports.length > 0) {
+            let hasNew = false;
+            data.recent_reports.forEach(report => {
+                if (report.id > highestKnownId) {
+                    hasNew = true;
+                    highestKnownId = report.id;
+                    
+                    // Trigger sound & toast notifications
+                    if (window.playNotificationSound) window.playNotificationSound();
+                    if (window.showToastNotification) {
+                        window.showToastNotification(
+                            `Laporan Baru: ${report.title}`,
+                            `Kategori: ${report.category} | Tingkat Urgensi: ${report.urgency}`,
+                            report.urgency,
+                            '#'
+                        );
+                    }
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        new Notification(`Laporan Baru Masuk!`, {
+                            body: `${report.title} di ${report.location_name}`,
+                            icon: '♻️'
+                        });
+                    }
+                }
+            });
+            if (hasNew) {
+                // Show a banner urging admin to refresh page to see the grouped layout refresh
+                if (window.showToastNotification) {
+                    window.showToastNotification(
+                        `Pembaruan Halaman`,
+                        `Silakan muat ulang halaman (F5) untuk merender data laporan baru pada kategori urgensinya.`,
+                        'rendah',
+                        'javascript:window.location.reload()'
+                    );
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Polling error on reports page:', e);
+    }
 });
 </script>
 @endpush

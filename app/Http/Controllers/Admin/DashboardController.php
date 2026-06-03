@@ -25,9 +25,12 @@ class DashboardController extends Controller
             'organic_avg_confidence' => Classification::query()->where('category', 'organik')->avg('confidence') ?? 0,
             'anorganic_avg_confidence' => Classification::query()->where('category', 'anorganik')->avg('confidence') ?? 0,
             'other_avg_confidence' => Classification::query()->whereNotIn('category', ['organik', 'anorganik'])->avg('confidence') ?? 0,
+            'high_urgency_count' => EnvironmentalReport::query()->where('urgency', 'Tinggi')->where('status', '!=', 'Selesai')->count(),
+            'medium_urgency_count' => EnvironmentalReport::query()->where('urgency', 'Sedang')->where('status', '!=', 'Selesai')->count(),
+            'low_urgency_count' => EnvironmentalReport::query()->where('urgency', 'Rendah')->where('status', '!=', 'Selesai')->count(),
         ];
 
-        $recentReports = EnvironmentalReport::query()->latest('reported_at')->take(5)->get();
+        $recentReports = EnvironmentalReport::query()->where('status', '!=', 'Selesai')->latest('reported_at')->take(5)->get();
         $recentClassifications = Classification::query()->with('user')->latest('detected_at')->take(8)->get();
 
         return view('admin.dashboard.index', compact('stats', 'recentReports', 'recentClassifications'));

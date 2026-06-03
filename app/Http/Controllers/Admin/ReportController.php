@@ -17,9 +17,15 @@ class ReportController extends Controller
 {
     public function index(): View
     {
-        $reports = EnvironmentalReport::query()->with('user')->latest('reported_at')->paginate(20);
+        $query = EnvironmentalReport::query()->with('user');
 
-        return view('admin.reports.index', compact('reports'));
+        $reportsTinggi = (clone $query)->where('urgency', 'Tinggi')->latest('reported_at')->get();
+        $reportsSedang = (clone $query)->where('urgency', 'Sedang')->latest('reported_at')->get();
+        $reportsRendah = (clone $query)->where('urgency', 'Rendah')->latest('reported_at')->get();
+
+        $totalCount = EnvironmentalReport::query()->count();
+
+        return view('admin.reports.index', compact('reportsTinggi', 'reportsSedang', 'reportsRendah', 'totalCount'));
     }
 
     public function updateStatus(Request $request, EnvironmentalReport $report): JsonResponse|RedirectResponse
@@ -53,6 +59,25 @@ class ReportController extends Controller
      */
     public function ajaxStats(): JsonResponse
     {
+        $recentReports = EnvironmentalReport::query()
+            ->with('user')
+            ->latest('id')
+            ->take(5)
+            ->get()
+            ->map(function ($report) {
+                return [
+                    'id' => $report->id,
+                    'title' => $report->title,
+                    'description' => $report->description,
+                    'location_name' => $report->location_name,
+                    'urgency' => $report->urgency,
+                    'status' => $report->status,
+                    'image_url' => $report->image_url,
+                    'user_name' => $report->user?->display_name ?? 'Pengguna',
+                    'time_formatted' => optional($report->reported_at)->format('d/m H:i') ?? $report->created_at->format('d/m H:i'),
+                ];
+            });
+
         return response()->json([
             'total_users'            => User::query()->where('role', 'user')->count(),
             'total_admins'           => User::query()->where('role', 'admin')->count(),
@@ -65,6 +90,10 @@ class ReportController extends Controller
             'organic_avg_confidence' => Classification::query()->where('category', 'organik')->avg('confidence') ?? 0,
             'anorganic_avg_confidence' => Classification::query()->where('category', 'anorganik')->avg('confidence') ?? 0,
             'other_avg_confidence' => Classification::query()->whereNotIn('category', ['organik', 'anorganik'])->avg('confidence') ?? 0,
+            'high_urgency_count'     => EnvironmentalReport::query()->where('urgency', 'Tinggi')->where('status', '!=', 'Selesai')->count(),
+            'medium_urgency_count'   => EnvironmentalReport::query()->where('urgency', 'Sedang')->where('status', '!=', 'Selesai')->count(),
+            'low_urgency_count'      => EnvironmentalReport::query()->where('urgency', 'Rendah')->where('status', '!=', 'Selesai')->count(),
+            'recent_reports'         => $recentReports,
         ]);
     }
 }

@@ -739,6 +739,61 @@
             color: var(--danger);
             opacity: 1;
         }
+
+        /* ── Toast Container & Toast Notification ── */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+            width: calc(100vw - 48px);
+            pointer-events: none;
+        }
+        .toast-notif {
+            pointer-events: auto;
+            background: var(--card-solid);
+            border: var(--glass-border);
+            border-left: 5px solid var(--primary);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            color: var(--text);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.35s ease;
+        }
+        .toast-notif.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast-notif-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+            background: rgba(148,163,184,0.08);
+        }
+        .toast-notif.tinggi { border-left-color: var(--danger); }
+        .toast-notif.tinggi .toast-notif-icon { background: var(--danger-light); }
+        .toast-notif.sedang { border-left-color: var(--warning); }
+        .toast-notif.sedang .toast-notif-icon { background: var(--warning-light); }
+        .toast-notif.rendah { border-left-color: var(--success); }
+        .toast-notif.rendah .toast-notif-icon { background: var(--success-light); }
+        
+        .toast-notif-body { flex: 1; min-width: 0; }
+        .toast-notif-title { font-weight: 800; font-size: 13px; color: var(--text); margin-bottom: 2px; }
+        .toast-notif-msg { font-size: 12px; color: var(--text-2); line-height: 1.4; word-break: break-word; }
+        .toast-notif-close { cursor: pointer; font-size: 16px; color: var(--text-3); border: none; background: none; line-height: 1; padding: 0 4px; }
+        .toast-notif-close:hover { color: var(--text); }
     </style>
     @stack('styles')
 </head>
@@ -856,10 +911,90 @@
     </main>
 </div>
 
+<div id="toast-container"></div>
+
 <script>
 // ── Global Realtime Polling ──────────────────────────────────────
 (function() {
-    const POLL_INTERVAL = 30000; // 30 detik
+    const POLL_INTERVAL = 5000; // 5 detik (percepat untuk respons real-time)
+
+    // Request permission for push notifications
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // Play double beep sound
+    window.playNotificationSound = function() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const audioCtx = new AudioCtx();
+            
+            const playBeep = (delay, freq, duration) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                
+                gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+                gain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + delay + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+                
+                osc.start(audioCtx.currentTime + delay);
+                osc.stop(audioCtx.currentTime + delay + duration);
+            };
+            
+            playBeep(0, 880, 0.1);
+            playBeep(0.12, 1100, 0.18);
+        } catch (e) {
+            console.warn('Web Audio beep error:', e);
+        }
+    };
+
+    // Show custom toast notification
+    window.showToastNotification = function(title, msg, urgency = 'sedang', actionUrl = '#') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notif ${urgency.toLowerCase()}`;
+        
+        let icon = '🔔';
+        if (urgency.toLowerCase() === 'tinggi') icon = '🔴';
+        else if (urgency.toLowerCase() === 'sedang') icon = '🟡';
+        else if (urgency.toLowerCase() === 'rendah') icon = '🟢';
+
+        toast.innerHTML = `
+            <div class="toast-notif-icon">${icon}</div>
+            <div class="toast-notif-body" onclick="window.location.href='${actionUrl}'" style="cursor:pointer">
+                <div class="toast-notif-title">${title}</div>
+                <div class="toast-notif-msg">${msg}</div>
+            </div>
+            <button class="toast-notif-close">&times;</button>
+        `;
+
+        container.appendChild(toast);
+
+        // Slide in
+        setTimeout(() => toast.classList.add('show'), 50);
+
+        // Click to close
+        toast.querySelector('.toast-notif-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400);
+        });
+
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }
+        }, 7000);
+    };
 
     // ── Live clock — update setiap detik ──
     function tickClock() {
@@ -874,7 +1009,7 @@
     tickClock();
     setInterval(tickClock, 1000);
 
-    // ── Polling data — setiap 30 detik ──
+    // ── Polling data ──
     window.registerPollCallback = function(fn) {
         window._pollCallbacks = window._pollCallbacks || [];
         window._pollCallbacks.push(fn);
@@ -929,16 +1064,6 @@
         document.body.style.overflow = 'hidden';
     }
 
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-
-    if (menuToggle) menuToggle.addEventListener('click', openSidebar);
-    if (sidebarClose) sidebarClose.addEventListener('click', closeSidebar);
-    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
-
     // Theme Toggle Handler
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeToggleIcon = document.getElementById('theme-toggle-icon');
@@ -965,6 +1090,16 @@
             window.dispatchEvent(new Event('theme-changed'));
         });
     }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (menuToggle) menuToggle.addEventListener('click', openSidebar);
+    if (sidebarClose) sidebarClose.addEventListener('click', closeSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 })();
 </script>
 @stack('scripts')

@@ -222,6 +222,11 @@
         transform: scale(1);
         visibility: visible;
     }
+
+    /* Urgency Badge Styles */
+    .urgency-high { color: #f87171; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.18); }
+    .urgency-med { color: #fbbf24; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.18); }
+    .urgency-low { color: #34d399; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.18); }
 </style>
 @endpush
 
@@ -325,6 +330,40 @@
     </div>
 </div>
 
+{{-- Group 4: Urgensi Laporan --}}
+<div class="stats-group" style="margin-bottom: 20px;">
+    <div class="stats-group-header">
+        <span class="stats-group-icon">⚠️</span>
+        <div>
+            <div class="stats-group-title">Kadar Urgensi Laporan Lingkungan</div>
+            <div class="stats-group-sub">Pengelompokan laporan berdasarkan tingkat kedaruratan</div>
+        </div>
+    </div>
+    <div class="grid-3">
+        <a href="{{ route('admin.reports.index') }}" class="stat-tile red" style="box-shadow: 0 4px 14px rgba(239, 68, 68, 0.05);">
+            <div class="stat-tile-icon red">🔴</div>
+            <div class="stat-tile-content">
+                <div class="stat-tile-label">Urgensi Tinggi</div>
+                <div class="stat-tile-value" id="stat-urgency-high">{{ $stats['high_urgency_count'] }}</div>
+            </div>
+        </a>
+        <a href="{{ route('admin.reports.index') }}" class="stat-tile orange" style="box-shadow: 0 4px 14px rgba(249, 115, 22, 0.05);">
+            <div class="stat-tile-icon orange">🟡</div>
+            <div class="stat-tile-content">
+                <div class="stat-tile-label">Urgensi Sedang</div>
+                <div class="stat-tile-value" id="stat-urgency-medium">{{ $stats['medium_urgency_count'] }}</div>
+            </div>
+        </a>
+        <a href="{{ route('admin.reports.index') }}" class="stat-tile green" style="box-shadow: 0 4px 14px rgba(34, 197, 94, 0.05);">
+            <div class="stat-tile-icon green">🟢</div>
+            <div class="stat-tile-content">
+                <div class="stat-tile-label">Urgensi Rendah</div>
+                <div class="stat-tile-value" id="stat-urgency-low">{{ $stats['low_urgency_count'] }}</div>
+            </div>
+        </a>
+    </div>
+</div>
+
 {{-- ── Chart + Recent Reports ── --}}
 <div class="grid-2">
     {{-- Donut Chart --}}
@@ -379,15 +418,16 @@
                     <th style="width:52px"></th>
                     <th>Judul</th>
                     <th>Lokasi</th>
+                    <th>Urgensi</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody id="recent-reports-tbody">
                 @forelse($recentReports as $report)
-                    <tr>
+                    <tr data-id="{{ $report->id }}">
                         <td>
                             @if($report->image_path)
-                                <img src="{{ url('report-images/' . basename($report->image_path)) }}" class="report-thumb" alt="" onclick="openLightbox(this.src)">
+                                <img src="{{ $report->image_url }}" class="report-thumb" alt="" onclick="openLightbox(this.src)">
                             @else
                                 <div class="report-thumb-placeholder">📷</div>
                             @endif
@@ -398,13 +438,18 @@
                         </td>
                         <td class="truncate" style="max-width:120px">{{ $report->location_name }}</td>
                         <td>
+                            <span class="badge {{ $report->urgency === 'Tinggi' ? 'urgency-high' : ($report->urgency === 'Sedang' ? 'urgency-med' : 'urgency-low') }}" style="padding: 2px 8px; font-size: 10px;">
+                                {{ $report->urgency }}
+                            </span>
+                        </td>
+                        <td>
                             <span class="badge {{ $report->status === 'Selesai' ? 'badge-success' : ($report->status === 'Diproses' ? 'badge-warning' : 'badge-neutral') }}">
                                 {{ $report->status }}
                             </span>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="muted" style="text-align:center;padding:24px">Belum ada laporan.</td></tr>
+                    <tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Belum ada laporan.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -722,6 +767,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 })();
 
 // ── Realtime Polling ──
+let highestKnownId = Math.max(...[...document.querySelectorAll('#recent-reports-tbody tr')].map(tr => parseInt(tr.dataset.id) || 0));
+
 registerPollCallback(async function() {
     try {
         const res = await fetch('{{ route("admin.stats") }}', {
@@ -730,6 +777,7 @@ registerPollCallback(async function() {
         if (!res.ok) return;
         const data = await res.json();
 
+        // Update statistics counters with animation
         const map = {
             'stat-users': data.total_users,
             'stat-cls': data.total_classifications,
@@ -739,6 +787,9 @@ registerPollCallback(async function() {
             'stat-anorganic': data.anorganic_count,
             'stat-pending': data.pending_reports,
             'stat-admins': data.total_admins,
+            'stat-urgency-high': data.high_urgency_count,
+            'stat-urgency-medium': data.medium_urgency_count,
+            'stat-urgency-low': data.low_urgency_count,
         };
         for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
@@ -754,7 +805,85 @@ registerPollCallback(async function() {
                 data.other_avg_confidence
             );
         }
-    } catch(e) {}
+
+        // Process new reports
+        if (data.recent_reports && data.recent_reports.length > 0) {
+            // Sort ascending by ID to process in order of creation
+            const sortedReports = [...data.recent_reports].sort((a, b) => a.id - b.id);
+            
+            sortedReports.forEach(report => {
+                if (report.id > highestKnownId) {
+                    highestKnownId = report.id;
+
+                    // 1. Show HTML Toast Notification
+                    if (window.showToastNotification) {
+                        window.showToastNotification(
+                            `Laporan Baru: ${report.title}`,
+                            `Kategori: ${report.category} | Lokasi: ${report.location_name}`,
+                            report.urgency,
+                            '{{ route("admin.reports.index") }}'
+                        );
+                    }
+
+                    // 2. Play Audio beep
+                    if (window.playNotificationSound) {
+                        window.playNotificationSound();
+                    }
+
+                    // 3. Browser Push Notification
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        new Notification(`Sampah Detector: Laporan Baru!`, {
+                            body: `${report.title} (${report.urgency}) di ${report.location_name}`,
+                            icon: '♻️'
+                        });
+                    }
+
+                    // 4. Prepend dynamic table row to "Laporan Terbaru"
+                    const tbody = document.getElementById('recent-reports-tbody');
+                    if (tbody) {
+                        // Remove empty placeholder row if present
+                        if (tbody.querySelector('td[colspan]')) {
+                            tbody.innerHTML = '';
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.dataset.id = report.id;
+                        tr.className = 'row-new'; // Triggers smooth highlight fade
+                        
+                        const imgHtml = report.image_url 
+                            ? `<img src="${report.image_url}" class="report-thumb" alt="" onclick="openLightbox(this.src)">` 
+                            : `<div class="report-thumb-placeholder">📷</div>`;
+                            
+                        const urgencyBadgeClass = report.urgency === 'Tinggi' ? 'urgency-high' : (report.urgency === 'Sedang' ? 'urgency-med' : 'urgency-low');
+                        const statusBadgeClass = report.status === 'Selesai' ? 'badge-success' : (report.status === 'Diproses' ? 'badge-warning' : 'badge-neutral');
+
+                        tr.innerHTML = `
+                            <td>${imgHtml}</td>
+                            <td>
+                                <div class="font-bold truncate" style="max-width:140px">${report.title}</div>
+                                <div class="text-sm muted">${report.time_formatted}</div>
+                            </td>
+                            <td class="truncate" style="max-width:120px">${report.location_name}</td>
+                            <td>
+                                <span class="badge ${urgencyBadgeClass}" style="padding: 2px 8px; font-size: 10px;">${report.urgency}</span>
+                            </td>
+                            <td>
+                                <span class="badge ${statusBadgeClass}">${report.status}</span>
+                            </td>
+                        `;
+                        tbody.insertBefore(tr, tbody.firstChild);
+
+                        // Ensure maximum of 5 rows
+                        while (tbody.children.length > 5) {
+                            tbody.lastChild.remove();
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) {
+        console.warn('Realtime polling error:', e);
+    }
 });
 </script>
 @endpush
