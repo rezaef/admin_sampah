@@ -41,55 +41,6 @@
     .confidence-bar-wrap { background: rgba(148,163,184,0.1); border-radius: 999px; height: 6px; flex: 1; min-width: 60px; }
     .confidence-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #16a34a, #4ade80); }
 
-    /* Lightbox modal */
-    .lightbox {
-        display: none;
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,.85);
-        z-index: 99999;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    }
-    .lightbox.open { display: flex; }
-    .lightbox-content {
-        position: relative;
-        display: inline-block;
-        max-width: 90vw;
-        max-height: 85vh;
-    }
-    .lightbox img {
-        display: block;
-        max-width: 90vw;
-        max-height: 85vh;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.5);
-    }
-    .lightbox-close {
-        position: absolute;
-        top: -16px;
-        right: -16px;
-        width: 36px;
-        height: 36px;
-        background: #ef4444;
-        color: #fff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        font-weight: bold;
-        cursor: pointer;
-        border: 2px solid #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: transform 0.15s, background-color 0.15s;
-        z-index: 100001;
-        line-height: 1;
-    }
-    .lightbox-close:hover {
-        transform: scale(1.1);
-        background: #dc2626;
-    }
 
     /* Stats Grouping Layout */
     .stats-group-row-1 {
@@ -131,7 +82,7 @@
     .stat-tile {
         background: rgba(148, 163, 184, 0.04);
         border-radius: var(--radius);
-        padding: 18px 22px;
+        padding: 18px 34px 18px 22px;
         display: flex;
         align-items: center;
         gap: 16px;
@@ -213,15 +164,53 @@
         color: var(--text-3);
         opacity: 0;
         transition: opacity 0.2s, transform 0.2s;
-        transform: translateX(-6px);
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%) translateX(-6px);
     }
     .stat-tile:hover::after {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(-50%) translateX(0);
         color: var(--primary);
     }
 
-    @media (max-width: 1024px) {
+    /* Responsive adjustments for laptop screens */
+    @media (max-width: 1440px) {
+        .stats-group {
+            padding: 16px;
+            gap: 12px;
+        }
+        .stats-group-header {
+            padding-bottom: 8px;
+        }
+        .stat-tile {
+            padding: 12px 26px 12px 14px;
+            gap: 10px;
+            border-radius: var(--radius-sm);
+        }
+        .stat-tile::before {
+            top: 12px; bottom: 12px;
+            width: 4px;
+        }
+        .stat-tile-icon {
+            width: 38px; height: 38px;
+            font-size: 18px;
+            border-radius: 8px;
+        }
+        .stat-tile-value {
+            font-size: 20px;
+        }
+        .stat-tile-label {
+            font-size: 9.5px;
+            letter-spacing: 0.5px;
+        }
+        .stats-group .grid-3, .stats-group .grid-2 {
+            gap: 10px;
+        }
+    }
+
+    @media (max-width: 1300px) {
         .stats-group-row-1 {
             grid-template-columns: 1fr;
         }
@@ -444,48 +433,52 @@
             </div>
             <a href="{{ route('admin.reports.index') }}" class="btn btn-sm">Lihat semua</a>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:52px"></th>
-                    <th>Judul</th>
-                    <th>Lokasi</th>
-                    <th>Urgensi</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="recent-reports-tbody">
-                @forelse($recentReports as $report)
-                    <tr data-id="{{ $report->id }}">
-                        <td>
-                            @if($report->image_path)
-                                <img src="{{ $report->image_url }}" class="report-thumb" alt="" onclick="openLightbox(this.src)" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="report-thumb-placeholder" style="display:none">📷</div>
-                            @else
-                                <div class="report-thumb-placeholder">📷</div>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="font-bold truncate" style="max-width:140px">{{ $report->title }}</div>
-                            <div class="text-sm muted">{{ optional($report->reported_at)->format('d/m H:i') }}</div>
-                        </td>
-                        <td class="truncate" style="max-width:120px">{{ $report->location_name }}</td>
-                        <td>
-                            <span class="badge {{ $report->urgency === 'Tinggi' ? 'urgency-high' : ($report->urgency === 'Sedang' ? 'urgency-med' : 'urgency-low') }}" style="padding: 2px 8px; font-size: 10px;">
-                                {{ $report->urgency }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge {{ $report->status === 'Selesai' ? 'badge-success' : ($report->status === 'Diproses' ? 'badge-warning' : 'badge-neutral') }}">
-                                {{ $report->status }}
-                            </span>
-                        </td>
+        <div class="tbl-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:52px"></th>
+                        <th>Judul</th>
+                        <th>Lokasi</th>
+                        <th>Urgensi</th>
+                        <th>Status</th>
                     </tr>
-                @empty
-                    <tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Belum ada laporan.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody id="recent-reports-tbody">
+                    @forelse($recentReports as $report)
+                        <tr data-id="{{ $report->id }}">
+                            <td>
+                                @if($report->image_path)
+                                    <img src="{{ $report->image_url }}" class="report-thumb" alt="" onclick="openLightbox(this.src)" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="report-thumb-placeholder" style="display:none">📷</div>
+                                @else
+                                    <div class="report-thumb-placeholder">📷</div>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="font-bold truncate" style="max-width:140px" title="{{ $report->title }}">{{ $report->title }}</div>
+                                <div class="text-sm muted">{{ optional($report->reported_at)->format('d/m H:i') }}</div>
+                            </td>
+                            <td>
+                                <div class="truncate" style="max-width:120px" title="{{ $report->location_name }}">{{ $report->location_name }}</div>
+                            </td>
+                            <td>
+                                <span class="badge {{ $report->urgency === 'Tinggi' ? 'urgency-high' : ($report->urgency === 'Sedang' ? 'urgency-med' : 'urgency-low') }}" style="padding: 2px 8px; font-size: 10px;">
+                                    {{ $report->urgency }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {{ $report->status === 'Selesai' ? 'badge-success' : ($report->status === 'Diproses' ? 'badge-warning' : 'badge-neutral') }}">
+                                    {{ $report->status }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Belum ada laporan.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -498,76 +491,56 @@
         </div>
         <a href="{{ route('admin.classifications.index') }}" class="btn btn-sm">Lihat semua</a>
     </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Pengguna</th>
-                <th>Kategori</th>
-                <th>Confidence</th>
-                <th>Engine</th>
-                <th>Latency</th>
-                <th>Waktu</th>
-            </tr>
-        </thead>
-        <tbody id="recent-cls-tbody">
-            @forelse($recentClassifications as $item)
+    <div class="tbl-scroll">
+        <table>
+            <thead>
                 <tr>
-                    <td>
-                        <div class="activity-row">
-                            @php $colors = ['#16a34a','#0ea5e9','#8b5cf6','#f97316','#dc2626']; $c = $colors[crc32($item->user?->display_name ?? 'X') % count($colors)]; @endphp
-                            <div class="activity-avatar" style="background:{{ $c }}">{{ strtoupper(substr($item->user?->display_name ?? '?', 0, 1)) }}</div>
-                            <span class="font-bold">{{ $item->user?->display_name ?? '-' }}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="badge {{ str_contains($item->category,'organik') && !str_contains($item->category,'an') ? 'badge-success' : 'badge-blue' }}">
-                            {{ ucfirst(str_replace('_', ' ', $item->category)) }}
-                        </span>
-                    </td>
-                    <td style="min-width:120px">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <div class="confidence-bar-wrap">
-                                <div class="confidence-bar" style="width:{{ number_format($item->confidence * 100, 0) }}%"></div>
-                            </div>
-                            <span class="text-sm font-bold">{{ number_format($item->confidence * 100, 1) }}%</span>
-                        </div>
-                    </td>
-                    <td class="text-sm muted">{{ $item->engine }}</td>
-                    <td class="text-sm muted">{{ $item->latency_ms }} ms</td>
-                    <td class="text-sm muted">{{ optional($item->detected_at)->format('d/m H:i') }}</td>
+                    <th>Pengguna</th>
+                    <th>Kategori</th>
+                    <th>Confidence</th>
+                    <th>Engine</th>
+                    <th>Latency</th>
+                    <th>Waktu</th>
                 </tr>
-            @empty
-                <tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Belum ada data klasifikasi.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
-
-{{-- Lightbox --}}
-<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-    <div class="lightbox-content" onclick="event.stopPropagation()">
-        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
-        <img id="lightbox-img" src="" alt="Foto laporan">
+            </thead>
+            <tbody id="recent-cls-tbody">
+                @forelse($recentClassifications as $item)
+                    <tr>
+                        <td>
+                            <div class="activity-row">
+                                @php $colors = ['#16a34a','#0ea5e9','#8b5cf6','#f97316','#dc2626']; $c = $colors[crc32($item->user?->display_name ?? 'X') % count($colors)]; @endphp
+                                <div class="activity-avatar" style="background:{{ $c }}">{{ strtoupper(substr($item->user?->display_name ?? '?', 0, 1)) }}</div>
+                                <span class="font-bold">{{ $item->user?->display_name ?? '-' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {{ str_contains($item->category,'organik') && !str_contains($item->category,'an') ? 'badge-success' : 'badge-blue' }}">
+                                {{ ucfirst(str_replace('_', ' ', $item->category)) }}
+                            </span>
+                        </td>
+                        <td style="min-width:120px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div class="confidence-bar-wrap">
+                                    <div class="confidence-bar" style="width:{{ number_format($item->confidence * 100, 0) }}%"></div>
+                                </div>
+                                <span class="text-sm font-bold">{{ number_format($item->confidence * 100, 1) }}%</span>
+                            </div>
+                        </td>
+                        <td class="text-sm muted">{{ $item->engine }}</td>
+                        <td class="text-sm muted">{{ $item->latency_ms }} ms</td>
+                        <td class="text-sm muted">{{ optional($item->detected_at)->format('d/m H:i') }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Belum ada data klasifikasi.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
-
 @endsection
 
 @push('scripts')
 <script>
-// ── Lightbox ──
-function openLightbox(src) {
-    document.getElementById('lightbox-img').src = src;
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-function closeLightbox(e) {
-    if (e === undefined || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
-        document.getElementById('lightbox').classList.remove('open');
-        document.body.style.overflow = '';
-    }
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // ── Donut Chart ──
 (function() {

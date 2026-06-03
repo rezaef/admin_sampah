@@ -442,6 +442,9 @@
         tbody tr:hover { background: rgba(148,163,184,0.04); }
         tbody tr:last-child td { border-bottom: none; }
 
+        /* ── Scrollable Table Wrapper ── */
+        .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
         /* ═══════════════════════════════════════════
            Badges — with subtle glow
            ═══════════════════════════════════════════ */
@@ -794,6 +797,57 @@
         .toast-notif-msg { font-size: 12px; color: var(--text-2); line-height: 1.4; word-break: break-word; }
         .toast-notif-close { cursor: pointer; font-size: 16px; color: var(--text-3); border: none; background: none; line-height: 1; padding: 0 4px; }
         .toast-notif-close:hover { color: var(--text); }
+
+        /* ── Global Lightbox Modal ── */
+        .lightbox {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .lightbox.open { display: flex; }
+        .lightbox-content {
+            position: relative;
+            display: inline-block;
+            max-width: 90vw;
+            max-height: 85vh;
+        }
+        .lightbox img {
+            display: block;
+            max-width: 90vw;
+            max-height: 85vh;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: -16px;
+            right: -16px;
+            width: 34px;
+            height: 34px;
+            background: var(--card-solid);
+            color: var(--text);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.15s, background-color 0.15s, border-color 0.15s;
+            z-index: 1000001;
+            line-height: 1;
+        }
+        .lightbox-close:hover {
+            transform: scale(1.1);
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
     </style>
     @stack('styles')
 </head>
@@ -913,6 +967,13 @@
 
 <div id="toast-container"></div>
 
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+        <img id="lightbox-img" src="" alt="Foto laporan">
+    </div>
+</div>
+
 <script>
 // ── Global Realtime Polling ──────────────────────────────────────
 (function() {
@@ -995,6 +1056,29 @@
             }
         }, 7000);
     };
+
+    // ── Global Lightbox ──
+    window.openLightbox = function(src) {
+        const lb = document.getElementById('lightbox');
+        const img = document.getElementById('lightbox-img');
+        if (lb && img) {
+            img.src = src;
+            lb.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    };
+    window.closeLightbox = function(e) {
+        const lb = document.getElementById('lightbox');
+        if (lb) {
+            if (e === undefined || e.target === lb || e.target.classList.contains('lightbox-close')) {
+                lb.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+    };
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') window.closeLightbox();
+    });
 
     // ── Live clock — update setiap detik ──
     function tickClock() {

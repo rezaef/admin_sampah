@@ -14,10 +14,12 @@
         @endif
     </td>
     <td>
-        <div class="font-bold" style="max-width:200px">{{ $report->title }}</div>
-        <div class="text-sm muted">{{ $report->user?->display_name ?? '-' }}</div>
+        <div class="font-bold truncate" style="max-width:200px" title="{{ $report->title }}">{{ $report->title }}</div>
+        <div class="text-sm muted truncate" style="max-width:200px" title="{{ $report->user?->display_name ?? '-' }}">{{ $report->user?->display_name ?? '-' }}</div>
     </td>
-    <td class="muted text-sm" style="max-width:160px">{{ $report->location_name }}</td>
+    <td class="muted text-sm" style="max-width:160px">
+        <div class="truncate" style="max-width:160px" title="{{ $report->location_name }}">{{ $report->location_name }}</div>
+    </td>
     <td><span class="badge badge-neutral text-sm">{{ $report->category }}</span></td>
     <td class="text-sm muted">{{ optional($report->reported_at)->format('d/m/Y H:i') }}</td>
     <td>

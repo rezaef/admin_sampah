@@ -26,7 +26,6 @@
         font-weight: 800; font-size: 12px; color: #fff;
         flex-shrink: 0;
     }
-    .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     
     .action-btn-group {
         display: flex;

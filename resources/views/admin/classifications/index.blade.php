@@ -54,60 +54,62 @@
         <span class="badge badge-blue" id="cls-live">🔄 Auto-refresh 30s</span>
     </div>
 
-    <table style="margin-top:12px">
-        <thead>
-            <tr>
-                <th style="padding-left:20px">Pengguna</th>
-                <th>Kategori</th>
-                <th style="min-width:180px">Confidence</th>
-                <th>Engine</th>
-                <th>Latency</th>
-                <th>Waktu</th>
-            </tr>
-        </thead>
-        <tbody id="cls-tbody">
-            @forelse($classifications as $item)
+    <div class="tbl-scroll" style="margin-top:12px">
+        <table>
+            <thead>
                 <tr>
-                    <td style="padding-left:20px">
-                        <div style="display:flex;align-items:center;gap:10px">
-                            @php $colors = ['#16a34a','#0ea5e9','#8b5cf6','#f97316','#dc2626','#0d9488']; $c = $colors[crc32($item->user?->display_name ?? 'X') % count($colors)]; @endphp
-                            <div class="user-avatar" style="background:{{ $c }}">{{ strtoupper(substr($item->user?->display_name ?? '?', 0, 1)) }}</div>
-                            <div>
-                                <div class="font-bold">{{ $item->user?->display_name ?? '-' }}</div>
-                                <div class="text-sm muted">{{ $item->user?->username ?? '' }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        @php $isOrganic = str_contains(strtolower($item->category),'organik') && !str_contains(strtolower($item->category),'an'); @endphp
-                        <span class="badge {{ $isOrganic ? 'badge-success' : 'badge-blue' }}">
-                            {{ $isOrganic ? '🌱' : '♻️' }} {{ ucfirst(str_replace('_', ' ', $item->category)) }}
-                        </span>
-                    </td>
-                    <td>
-                        @php $conf = $item->confidence * 100; @endphp
-                        <div style="display:flex;align-items:center;gap:10px">
-                            <div class="confidence-bar-wrap">
-                                <div class="confidence-bar {{ $conf >= 80 ? 'high' : ($conf >= 50 ? 'med' : 'low') }}"
-                                     style="width:{{ number_format($conf, 0) }}%"></div>
-                            </div>
-                            <span class="text-sm font-bold" style="min-width:42px;text-align:right">{{ number_format($conf, 1) }}%</span>
-                        </div>
-                    </td>
-                    <td class="text-sm muted">{{ $item->engine }}</td>
-                    <td class="text-sm muted">{{ number_format($item->latency_ms) }} ms</td>
-                    <td class="text-sm muted">{{ optional($item->detected_at)->format('d/m/Y H:i') }}</td>
+                    <th style="padding-left:20px">Pengguna</th>
+                    <th>Kategori</th>
+                    <th style="min-width:180px">Confidence</th>
+                    <th>Engine</th>
+                    <th>Latency</th>
+                    <th>Waktu</th>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="6" style="text-align:center;padding:40px;color:var(--text-2)">
-                        <div style="font-size:36px;margin-bottom:8px">🔬</div>
-                        Belum ada data klasifikasi.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="cls-tbody">
+                @forelse($classifications as $item)
+                    <tr>
+                        <td style="padding-left:20px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                @php $colors = ['#16a34a','#0ea5e9','#8b5cf6','#f97316','#dc2626','#0d9488']; $c = $colors[crc32($item->user?->display_name ?? 'X') % count($colors)]; @endphp
+                                <div class="user-avatar" style="background:{{ $c }}">{{ strtoupper(substr($item->user?->display_name ?? '?', 0, 1)) }}</div>
+                                <div>
+                                    <div class="font-bold">{{ $item->user?->display_name ?? '-' }}</div>
+                                    <div class="text-sm muted">{{ $item->user?->username ?? '' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            @php $isOrganic = str_contains(strtolower($item->category),'organik') && !str_contains(strtolower($item->category),'an'); @endphp
+                            <span class="badge {{ $isOrganic ? 'badge-success' : 'badge-blue' }}">
+                                {{ $isOrganic ? '🌱' : '♻️' }} {{ ucfirst(str_replace('_', ' ', $item->category)) }}
+                            </span>
+                        </td>
+                        <td>
+                            @php $conf = $item->confidence * 100; @endphp
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div class="confidence-bar-wrap">
+                                    <div class="confidence-bar {{ $conf >= 80 ? 'high' : ($conf >= 50 ? 'med' : 'low') }}"
+                                         style="width:{{ number_format($conf, 0) }}%"></div>
+                                </div>
+                                <span class="text-sm font-bold" style="min-width:42px;text-align:right">{{ number_format($conf, 1) }}%</span>
+                            </div>
+                        </td>
+                        <td class="text-sm muted">{{ $item->engine }}</td>
+                        <td class="text-sm muted">{{ number_format($item->latency_ms) }} ms</td>
+                        <td class="text-sm muted">{{ optional($item->detected_at)->format('d/m/Y H:i') }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" style="text-align:center;padding:40px;color:var(--text-2)">
+                            <div style="font-size:36px;margin-bottom:8px">🔬</div>
+                            Belum ada data klasifikasi.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
     <div class="pagination" style="padding:16px 20px">{{ $classifications->links() }}</div>
 </div>
 @endsection

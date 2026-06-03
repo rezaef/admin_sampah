@@ -58,55 +58,6 @@
     }
     .status-select:focus { border-color: var(--primary); }
 
-    /* Lightbox */
-    .lightbox {
-        display: none;
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,.85);
-        z-index: 99999;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    }
-    .lightbox.open { display: flex; }
-    .lightbox-content {
-        position: relative;
-        display: inline-block;
-        max-width: 90vw;
-        max-height: 85vh;
-    }
-    .lightbox img {
-        display: block;
-        max-width: 90vw;
-        max-height: 85vh;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.5);
-    }
-    .lightbox-close {
-        position: absolute;
-        top: -16px;
-        right: -16px;
-        width: 36px;
-        height: 36px;
-        background: #ef4444;
-        color: #fff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        font-weight: bold;
-        cursor: pointer;
-        border: 2px solid #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: transform 0.15s, background-color 0.15s;
-        z-index: 100001;
-        line-height: 1;
-    }
-    .lightbox-close:hover {
-        transform: scale(1.1);
-        background: #dc2626;
-    }
 
     .save-btn {
         padding: 6px 12px;
@@ -121,7 +72,6 @@
     }
     .save-btn:hover { background: var(--primary-dark); }
     .save-btn:disabled { opacity:.5; cursor:not-allowed; }
-    .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 </style>
 @endpush
 
@@ -257,32 +207,10 @@
         </table>
     </div>
 </div>
-
-{{-- Lightbox --}}
-<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-    <div class="lightbox-content" onclick="event.stopPropagation()">
-        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
-        <img id="lightbox-img" src="" alt="Foto laporan">
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
 <script>
-// ── Lightbox ──
-function openLightbox(src) {
-    document.getElementById('lightbox-img').src = src;
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-function closeLightbox(e) {
-    if (e === undefined || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
-        document.getElementById('lightbox').classList.remove('open');
-        document.body.style.overflow = '';
-    }
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // ── Filter Tabs ──
 let activeStatus = '';

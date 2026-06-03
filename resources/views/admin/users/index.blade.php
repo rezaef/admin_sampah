@@ -13,7 +13,6 @@
     }
     .points-bar-wrap { background: rgba(148,163,184,0.1); border-radius: 999px; height: 5px; width: 70px; flex-shrink: 0; }
     .points-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#16a34a,#4ade80); max-width: 100%; }
-    .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .filter-tab {
         padding: 7px 16px;
