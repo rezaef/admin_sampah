@@ -5,7 +5,13 @@
 
 @push('styles')
 <style>
-    .chart-wrap { position: relative; height: 200px; }
+    .chart-wrap {
+        position: relative;
+        height: 200px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
     .donut-center {
         position: absolute; top: 50%; left: 50%;
         transform: translate(-50%, -50%);
@@ -888,10 +894,12 @@
                             tr.innerHTML = `
                                 <td>${imgHtml}</td>
                                 <td>
-                                    <div class="font-bold truncate" style="max-width:140px">${report.title}</div>
+                                    <div class="font-bold truncate" style="max-width:140px" title="${report.title}">${report.title}</div>
                                     <div class="text-sm muted">${report.time_formatted}</div>
                                 </td>
-                                <td class="truncate" style="max-width:120px">${report.location_name}</td>
+                                <td>
+                                    <div class="truncate" style="max-width:120px" title="${report.location_name}">${report.location_name}</div>
+                                </td>
                                 <td>
                                     <span class="badge ${urgencyBadgeClass}" style="padding: 2px 8px; font-size: 10px;">${report.urgency}</span>
                                 </td>
