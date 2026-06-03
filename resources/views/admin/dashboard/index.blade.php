@@ -402,7 +402,7 @@
             </div>
         </div>
         <div class="chart-wrap">
-            <canvas id="donutChart" width="200" height="200" style="display:block;margin:0 auto;"
+            <canvas id="donutChart" width="200" height="200" style="display: block; width: 200px; height: 200px;"
                     data-organic-avg="{{ number_format($stats['organic_avg_confidence'] * 100, 1) }}"
                     data-anorganic-avg="{{ number_format($stats['anorganic_avg_confidence'] * 100, 1) }}"
                     data-other-avg="{{ number_format($stats['other_avg_confidence'] * 100, 1) }}"></canvas>
