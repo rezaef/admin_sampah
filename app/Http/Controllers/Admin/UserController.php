@@ -53,13 +53,23 @@ class UserController extends Controller
         $data = $request->validate([
             'points_balance' => ['required', 'integer', 'min:0'],
             'role'           => ['required', 'string', 'in:user,admin'],
+            'password'       => ['nullable', 'string', 'min:6'],
         ]);
 
         if ($user->id === auth()->id() && $data['role'] !== 'admin') {
             return back()->with('error', 'Anda tidak dapat menurunkan role Anda sendiri.');
         }
 
-        $user->update($data);
+        $updateData = [
+            'points_balance' => $data['points_balance'],
+            'role'           => $data['role'],
+        ];
+
+        if (!empty($data['password'])) {
+            $updateData['password'] = bcrypt($data['password']);
+        }
+
+        $user->update($updateData);
 
         return back()->with('success', 'Data pengguna berhasil diperbarui.');
     }
