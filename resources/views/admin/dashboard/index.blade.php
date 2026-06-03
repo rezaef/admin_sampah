@@ -53,9 +53,11 @@
     .lightbox.open { display: flex; }
     .lightbox img { max-width: 90vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
     .lightbox-close {
-        position: absolute; top: 20px; right: 24px;
-        font-size: 36px; color: #fff; cursor: pointer; line-height: 1;
+        position: fixed; top: 20px; right: 24px;
+        font-size: 42px; color: #fff; cursor: pointer; line-height: 1;
+        z-index: 10000;
         transition: transform .15s;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
     .lightbox-close:hover { transform: scale(1.15); }
 
@@ -513,7 +515,7 @@
 
 {{-- Lightbox --}}
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-    <span class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('open')">×</span>
+    <span class="lightbox-close" onclick="closeLightbox(event)">×</span>
     <img id="lightbox-img" src="" alt="Foto laporan">
 </div>
 
@@ -525,13 +527,15 @@
 function openLightbox(src) {
     document.getElementById('lightbox-img').src = src;
     document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
 }
 function closeLightbox(e) {
-    if (e.target === document.getElementById('lightbox')) {
+    if (e === undefined || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
         document.getElementById('lightbox').classList.remove('open');
+        document.body.style.overflow = '';
     }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('lightbox').classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // ── Donut Chart ──
 (function() {
