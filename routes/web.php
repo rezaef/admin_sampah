@@ -64,6 +64,20 @@ Route::get('/delete-storage-link', function () {
     }
 });
 
+Route::get('/clear-cache', function () {
+    $results = [];
+    $commands = ['config:clear', 'route:clear', 'view:clear', 'cache:clear'];
+    foreach ($commands as $cmd) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($cmd);
+            $results[] = "$cmd: Success";
+        } catch (\Exception $e) {
+            $results[] = "$cmd: Failed (" . $e->getMessage() . ")";
+        }
+    }
+    return '<h3>Laravel Cache Clear</h3>' . implode('<br>', $results);
+});
+
 // Fallback route to serve storage files if symlink is not possible
 Route::get('/storage/{path}', function ($path) {
     $filePath = storage_path('app/public/' . $path);

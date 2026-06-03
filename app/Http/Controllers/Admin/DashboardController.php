@@ -30,7 +30,7 @@ class DashboardController extends Controller
             'low_urgency_count' => EnvironmentalReport::query()->where('urgency', 'Rendah')->where('status', '!=', 'Selesai')->count(),
         ];
 
-        $recentReports = EnvironmentalReport::query()->with('user')->where('status', '!=', 'Selesai')->latest('id')->take(5)->get();
+        $recentReports = EnvironmentalReport::query()->with('user')->latest('id')->take(5)->get();
         $recentClassifications = Classification::query()->with('user')->latest('detected_at')->take(8)->get();
 
         return view('admin.dashboard.index', compact('stats', 'recentReports', 'recentClassifications'));
