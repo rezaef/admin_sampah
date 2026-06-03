@@ -46,20 +46,50 @@
         display: none;
         position: fixed; inset: 0;
         background: rgba(0,0,0,.85);
-        z-index: 9999;
+        z-index: 99999;
         align-items: center;
         justify-content: center;
+        padding: 20px;
     }
     .lightbox.open { display: flex; }
-    .lightbox img { max-width: 90vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-    .lightbox-close {
-        position: fixed; top: 20px; right: 24px;
-        font-size: 42px; color: #fff; cursor: pointer; line-height: 1;
-        z-index: 10000;
-        transition: transform .15s;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    .lightbox-content {
+        position: relative;
+        display: inline-block;
+        max-width: 90vw;
+        max-height: 85vh;
     }
-    .lightbox-close:hover { transform: scale(1.15); }
+    .lightbox img {
+        display: block;
+        max-width: 90vw;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .lightbox-close {
+        position: absolute;
+        top: -16px;
+        right: -16px;
+        width: 36px;
+        height: 36px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: bold;
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: transform 0.15s, background-color 0.15s;
+        z-index: 100001;
+        line-height: 1;
+    }
+    .lightbox-close:hover {
+        transform: scale(1.1);
+        background: #dc2626;
+    }
 
     /* Stats Grouping Layout */
     .stats-group-row-1 {
@@ -515,8 +545,10 @@
 
 {{-- Lightbox --}}
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-    <span class="lightbox-close" onclick="closeLightbox(event)">×</span>
-    <img id="lightbox-img" src="" alt="Foto laporan">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+        <img id="lightbox-img" src="" alt="Foto laporan">
+    </div>
 </div>
 
 @endsection
