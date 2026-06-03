@@ -80,7 +80,7 @@
                             </div>
                         </td>
                         <td>
-                            @php $isOrganic = str_contains(strtolower($item->category),'organik') && !str_contains(strtolower($item->category),'an'); @endphp
+                            @php $isOrganic = strtolower($item->category) === 'organik'; @endphp
                             <span class="badge {{ $isOrganic ? 'badge-success' : 'badge-blue' }}">
                                 {{ $isOrganic ? '🌱' : '♻️' }} {{ ucfirst(str_replace('_', ' ', $item->category)) }}
                             </span>

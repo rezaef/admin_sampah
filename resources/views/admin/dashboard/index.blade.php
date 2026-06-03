@@ -522,7 +522,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge {{ str_contains($item->category,'organik') && !str_contains($item->category,'an') ? 'badge-success' : 'badge-blue' }}">
+                            <span class="badge {{ strtolower($item->category) === 'organik' ? 'badge-success' : 'badge-blue' }}">
                                 {{ ucfirst(str_replace('_', ' ', $item->category)) }}
                             </span>
                         </td>
