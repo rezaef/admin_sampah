@@ -42,7 +42,10 @@ class EnvironmentalReport extends Model
             return $this->image_path;
         }
 
-        return url('report-images/' . basename($this->image_path));
+        // The image_path from store('reports', 'public') is like "reports/abc.jpg"
+        // basename() extracts just the filename part for our custom route
+        $filename = basename($this->image_path);
+        return url('report-images/' . $filename);
     }
 
     public function user(): BelongsTo

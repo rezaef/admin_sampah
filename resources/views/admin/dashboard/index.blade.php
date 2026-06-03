@@ -427,7 +427,8 @@
                     <tr data-id="{{ $report->id }}">
                         <td>
                             @if($report->image_path)
-                                <img src="{{ $report->image_url }}" class="report-thumb" alt="" onclick="openLightbox(this.src)">
+                                <img src="{{ $report->image_url }}" class="report-thumb" alt="" onclick="openLightbox(this.src)" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="report-thumb-placeholder" style="display:none">📷</div>
                             @else
                                 <div class="report-thumb-placeholder">📷</div>
                             @endif
@@ -767,59 +768,74 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 })();
 
 // ── Realtime Polling ──
-let highestKnownId = Math.max(...[...document.querySelectorAll('#recent-reports-tbody tr')].map(tr => parseInt(tr.dataset.id) || 0));
+// Use sessionStorage to persist the highest known report ID across page navigations.
+// This prevents false notifications when switching between admin pages.
+(function() {
+    const STORAGE_KEY = 'dashboard_highest_report_id';
 
-registerPollCallback(async function() {
-    try {
-        const res = await fetch('{{ route("admin.stats") }}', {
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+    // Get highest ID from initial server-rendered table rows
+    const initialIds = [...document.querySelectorAll('#recent-reports-tbody tr[data-id]')]
+        .map(tr => parseInt(tr.dataset.id) || 0);
+    const initialMaxId = initialIds.length > 0 ? Math.max(...initialIds) : 0;
 
-        // Update statistics counters with animation
-        const map = {
-            'stat-users': data.total_users,
-            'stat-cls': data.total_classifications,
-            'stat-reports': data.total_reports,
-            'stat-redeem': data.total_redemptions,
-            'stat-organic': data.organic_count,
-            'stat-anorganic': data.anorganic_count,
-            'stat-pending': data.pending_reports,
-            'stat-admins': data.total_admins,
-            'stat-urgency-high': data.high_urgency_count,
-            'stat-urgency-medium': data.medium_urgency_count,
-            'stat-urgency-low': data.low_urgency_count,
-        };
-        for (const [id, val] of Object.entries(map)) {
-            const el = document.getElementById(id);
-            if (el && parseInt(el.textContent) !== val) animateCounter(el, val);
-        }
-        if (window._updateDonut) {
-            window._updateDonut(
-                data.organic_count, 
-                data.anorganic_count, 
-                data.total_classifications,
-                data.organic_avg_confidence,
-                data.anorganic_avg_confidence,
-                data.other_avg_confidence
-            );
-        }
+    // Restore from sessionStorage or use initial DOM value
+    const storedId = parseInt(sessionStorage.getItem(STORAGE_KEY)) || 0;
+    let highestKnownId = Math.max(storedId, initialMaxId);
 
-        // Process new reports
-        if (data.recent_reports && data.recent_reports.length > 0) {
-            // Sort ascending by ID to process in order of creation
-            const sortedReports = [...data.recent_reports].sort((a, b) => a.id - b.id);
-            
-            sortedReports.forEach(report => {
-                if (report.id > highestKnownId) {
-                    highestKnownId = report.id;
+    // Save so future page loads don't re-notify
+    sessionStorage.setItem(STORAGE_KEY, highestKnownId);
 
+    registerPollCallback(async function() {
+        try {
+            const res = await fetch('{{ route("admin.stats") }}', {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Update statistics counters with animation
+            const map = {
+                'stat-users': data.total_users,
+                'stat-cls': data.total_classifications,
+                'stat-reports': data.total_reports,
+                'stat-redeem': data.total_redemptions,
+                'stat-organic': data.organic_count,
+                'stat-anorganic': data.anorganic_count,
+                'stat-pending': data.pending_reports,
+                'stat-admins': data.total_admins,
+                'stat-urgency-high': data.high_urgency_count,
+                'stat-urgency-medium': data.medium_urgency_count,
+                'stat-urgency-low': data.low_urgency_count,
+            };
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (el && parseInt(el.textContent) !== val) animateCounter(el, val);
+            }
+            if (window._updateDonut) {
+                window._updateDonut(
+                    data.organic_count, 
+                    data.anorganic_count, 
+                    data.total_classifications,
+                    data.organic_avg_confidence,
+                    data.anorganic_avg_confidence,
+                    data.other_avg_confidence
+                );
+            }
+
+            // Process new reports — only notify for genuinely new ones
+            if (data.recent_reports && data.recent_reports.length > 0) {
+                // Find reports that are genuinely new (ID > our tracked maximum)
+                const newReports = data.recent_reports
+                    .filter(r => r.id > highestKnownId)
+                    .sort((a, b) => a.id - b.id); // process oldest first
+
+                // Fire notifications ONLY for genuinely new reports
+                newReports.forEach(report => {
                     // 1. Show HTML Toast Notification
                     if (window.showToastNotification) {
                         window.showToastNotification(
                             `Laporan Baru: ${report.title}`,
-                            `Kategori: ${report.category} | Lokasi: ${report.location_name}`,
+                            `Dari: ${report.user_name} | Lokasi: ${report.location_name}`,
                             report.urgency,
                             '{{ route("admin.reports.index") }}'
                         );
@@ -833,57 +849,67 @@ registerPollCallback(async function() {
                     // 3. Browser Push Notification
                     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                         new Notification(`Sampah Detector: Laporan Baru!`, {
-                            body: `${report.title} (${report.urgency}) di ${report.location_name}`,
+                            body: `${report.title} (${report.urgency}) di ${report.location_name}\nOleh: ${report.user_name}`,
                             icon: '♻️'
                         });
                     }
 
-                    // 4. Prepend dynamic table row to "Laporan Terbaru"
+                    // 4. Prepend new row to "Laporan Terbaru" table
                     const tbody = document.getElementById('recent-reports-tbody');
                     if (tbody) {
                         // Remove empty placeholder row if present
-                        if (tbody.querySelector('td[colspan]')) {
-                            tbody.innerHTML = '';
+                        const placeholder = tbody.querySelector('td[colspan]');
+                        if (placeholder) {
+                            placeholder.closest('tr').remove();
                         }
 
-                        const tr = document.createElement('tr');
-                        tr.dataset.id = report.id;
-                        tr.className = 'row-new'; // Triggers smooth highlight fade
-                        
-                        const imgHtml = report.image_url 
-                            ? `<img src="${report.image_url}" class="report-thumb" alt="" onclick="openLightbox(this.src)">` 
-                            : `<div class="report-thumb-placeholder">📷</div>`;
+                        // Don't add duplicate rows
+                        if (!tbody.querySelector(`tr[data-id="${report.id}"]`)) {
+                            const tr = document.createElement('tr');
+                            tr.dataset.id = report.id;
+                            tr.className = 'row-new';
                             
-                        const urgencyBadgeClass = report.urgency === 'Tinggi' ? 'urgency-high' : (report.urgency === 'Sedang' ? 'urgency-med' : 'urgency-low');
-                        const statusBadgeClass = report.status === 'Selesai' ? 'badge-success' : (report.status === 'Diproses' ? 'badge-warning' : 'badge-neutral');
+                            const imgHtml = report.image_url 
+                                ? `<img src="${report.image_url}" class="report-thumb" alt="" onclick="openLightbox(this.src)" onerror="this.parentElement.innerHTML='<div class=\\'report-thumb-placeholder\\'>📷</div>'">`
+                                : `<div class="report-thumb-placeholder">📷</div>`;
+                                
+                            const urgencyBadgeClass = report.urgency === 'Tinggi' ? 'urgency-high' : (report.urgency === 'Sedang' ? 'urgency-med' : 'urgency-low');
+                            const statusBadgeClass = report.status === 'Selesai' ? 'badge-success' : (report.status === 'Diproses' ? 'badge-warning' : 'badge-neutral');
 
-                        tr.innerHTML = `
-                            <td>${imgHtml}</td>
-                            <td>
-                                <div class="font-bold truncate" style="max-width:140px">${report.title}</div>
-                                <div class="text-sm muted">${report.time_formatted}</div>
-                            </td>
-                            <td class="truncate" style="max-width:120px">${report.location_name}</td>
-                            <td>
-                                <span class="badge ${urgencyBadgeClass}" style="padding: 2px 8px; font-size: 10px;">${report.urgency}</span>
-                            </td>
-                            <td>
-                                <span class="badge ${statusBadgeClass}">${report.status}</span>
-                            </td>
-                        `;
-                        tbody.insertBefore(tr, tbody.firstChild);
+                            tr.innerHTML = `
+                                <td>${imgHtml}</td>
+                                <td>
+                                    <div class="font-bold truncate" style="max-width:140px">${report.title}</div>
+                                    <div class="text-sm muted">${report.time_formatted}</div>
+                                </td>
+                                <td class="truncate" style="max-width:120px">${report.location_name}</td>
+                                <td>
+                                    <span class="badge ${urgencyBadgeClass}" style="padding: 2px 8px; font-size: 10px;">${report.urgency}</span>
+                                </td>
+                                <td>
+                                    <span class="badge ${statusBadgeClass}">${report.status}</span>
+                                </td>
+                            `;
+                            tbody.insertBefore(tr, tbody.firstChild);
 
-                        // Ensure maximum of 5 rows
-                        while (tbody.children.length > 5) {
-                            tbody.lastChild.remove();
+                            // Ensure maximum of 5 rows
+                            while (tbody.children.length > 5) {
+                                tbody.lastChild.remove();
+                            }
                         }
                     }
+                });
+
+                // Update highestKnownId to the maximum of all received reports
+                if (newReports.length > 0) {
+                    highestKnownId = Math.max(highestKnownId, ...newReports.map(r => r.id));
+                    sessionStorage.setItem(STORAGE_KEY, highestKnownId);
                 }
-            });
+            }
+        } catch(e) {
+            console.warn('Realtime polling error:', e);
         }
-    } catch(e) {
-        console.warn('Realtime polling error:', e);
-    }
-});
+    });
+})();
 </script>
 @endpush

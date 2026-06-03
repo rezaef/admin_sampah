@@ -61,6 +61,7 @@ class ReportController extends Controller
     {
         $recentReports = EnvironmentalReport::query()
             ->with('user')
+            ->where('status', '!=', 'Selesai')
             ->latest('id')
             ->take(5)
             ->get()

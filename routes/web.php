@@ -75,11 +75,86 @@ Route::get('/storage/{path}', function ($path) {
 
 // Directly serve report images via Laravel to bypass server-level symlink restrictions
 Route::get('/report-images/{filename}', function ($filename) {
-    $filePath = storage_path('app/public/reports/' . $filename);
-    if (!file_exists($filePath)) {
-        abort(404);
+    $filename = basename($filename);
+    
+    // Try multiple possible storage locations including typical cPanel structures
+    $possiblePaths = [
+        storage_path('app/public/reports/' . $filename),
+        storage_path('app/public/' . $filename),
+        public_path('storage/reports/' . $filename),
+        public_path('storage/' . $filename),
+        public_path('reports/' . $filename),
+        public_path($filename),
+        base_path('../public_html/storage/reports/' . $filename),
+        base_path('../public_html/storage/' . $filename),
+        base_path('../public_html/reports/' . $filename),
+    ];
+
+    foreach ($possiblePaths as $filePath) {
+        if (file_exists($filePath)) {
+            return response()->file($filePath, [
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
     }
-    return response()->file($filePath);
+
+    abort(404);
+})->where('filename', '.*');
+
+// Temporary debug route — remove after fixing image issues
+Route::get('/debug-images', function () {
+    $reports = \App\Models\EnvironmentalReport::whereNotNull('image_path')
+        ->take(10)->get(['id', 'image_path']);
+
+    // Find all image files in storage and public directories
+    $foundFiles = [];
+    $scanDirs = [
+        storage_path('app/public'),
+        public_path(),
+        base_path('../public_html'),
+    ];
+
+    foreach ($scanDirs as $dir) {
+        if (is_dir($dir)) {
+            try {
+                $di = new RecursiveDirectoryIterator($dir);
+                foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
+                    if (in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        $foundFiles[] = $filename;
+                    }
+                }
+            } catch (\Exception $e) {
+                $foundFiles[] = 'Error scanning ' . $dir . ': ' . $e->getMessage();
+            }
+        }
+    }
+
+    $results = $reports->map(function ($report) {
+        $filename = basename($report->image_path);
+        return [
+            'id' => $report->id,
+            'raw_image_path' => $report->image_path,
+            'basename' => $filename,
+            'generated_url' => $report->image_url,
+            'file_exists_in_reports' => file_exists(storage_path('app/public/reports/' . $filename)),
+            'file_exists_in_public' => file_exists(storage_path('app/public/' . $filename)),
+            'file_exists_raw_path' => file_exists(storage_path('app/public/' . $report->image_path)),
+            'public_reports_path_exists' => file_exists(public_path('storage/reports/' . $filename)),
+            'public_path_direct_exists' => file_exists(public_path('reports/' . $filename)),
+            'cpanel_public_html_exists' => file_exists(base_path('../public_html/storage/reports/' . $filename)),
+        ];
+    });
+
+    return response()->json([
+        'reports' => $results,
+        'all_image_files_on_server' => $foundFiles,
+        'paths' => [
+            'base_path' => base_path(),
+            'storage_path' => storage_path(),
+            'public_path' => public_path(),
+            'public_html_path' => realpath(base_path('../public_html')) ?: 'not found',
+        ]
+    ], 200, [], JSON_PRETTY_PRINT);
 });
 
 Route::prefix('admin')->group(function () {
