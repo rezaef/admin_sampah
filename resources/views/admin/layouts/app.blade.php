@@ -11,6 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') · Sampah Detector</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -857,7 +858,9 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-inner">
             <div class="brand" style="width: 100%;">
-                <div class="brand-icon">♻️</div>
+                <div class="brand-icon" style="padding: 0; overflow: hidden; background: none;">
+                    <img src="{{ asset('logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
                 <div class="brand-text">
                     <span class="brand-name">Sampah Detector</span>
                     <span class="brand-sub">Admin Panel</span>
