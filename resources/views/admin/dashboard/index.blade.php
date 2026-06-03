@@ -70,56 +70,64 @@
         background: rgba(148, 163, 184, 0.02);
         border: 1px solid var(--glass-border);
         border-radius: var(--radius);
-        padding: 18px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 20px;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
     .stats-group-header {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         border-bottom: 1px solid var(--line);
-        padding-bottom: 10px;
+        padding-bottom: 12px;
     }
-    .stats-group-icon { font-size: 20px; }
-    .stats-group-title { font-size: 14px; font-weight: 700; color: var(--text); }
-    .stats-group-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+    .stats-group-icon { font-size: 24px; }
+    .stats-group-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .stats-group-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
     /* Group Card Items - Borderless and Flat nested inside */
     .stats-group .grid-3, .stats-group .grid-2 {
         display: grid;
-        gap: 12px;
+        gap: 16px;
     }
     .stats-group .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .stats-group .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     .stat-tile {
         background: rgba(148, 163, 184, 0.04);
-        border-radius: var(--radius-sm);
-        padding: 14px 16px;
+        border-radius: var(--radius);
+        padding: 18px 22px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        transition: background 0.25s, transform 0.25s;
+        gap: 16px;
+        transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
         position: relative;
         text-decoration: none;
         color: inherit;
     }
     .stat-tile:hover {
         background: rgba(148, 163, 184, 0.08);
-        transform: translateY(-2px);
+        transform: translateY(-3px);
     }
+    .stat-tile.green:hover { box-shadow: 0 12px 24px -10px rgba(34, 197, 94, 0.2); }
+    .stat-tile.blue:hover { box-shadow: 0 12px 24px -10px rgba(14, 165, 233, 0.2); }
+    .stat-tile.orange:hover { box-shadow: 0 12px 24px -10px rgba(249, 115, 22, 0.2); }
+    .stat-tile.purple:hover { box-shadow: 0 12px 24px -10px rgba(139, 92, 246, 0.2); }
+    .stat-tile.teal:hover { box-shadow: 0 12px 24px -10px rgba(13, 148, 136, 0.2); }
+    .stat-tile.indigo:hover { box-shadow: 0 12px 24px -10px rgba(79, 70, 229, 0.2); }
+    .stat-tile.red:hover { box-shadow: 0 12px 24px -10px rgba(239, 68, 68, 0.2); }
+    .stat-tile.yellow:hover { box-shadow: 0 12px 24px -10px rgba(202, 138, 4, 0.2); }
     
     /* Indicator strip on left */
     .stat-tile::before {
         content: '';
         position: absolute;
-        left: 0; top: 12px; bottom: 12px;
-        width: 4px;
-        border-radius: 0 4px 4px 0;
+        left: 0; top: 16px; bottom: 16px;
+        width: 5px;
+        border-radius: 0 99px 99px 0;
     }
     .stat-tile.green::before { background: #16a34a; }
     .stat-tile.blue::before { background: #0ea5e9; }
@@ -131,10 +139,10 @@
     .stat-tile.yellow::before { background: #ca8a04; }
 
     .stat-tile-icon {
-        width: 36px; height: 36px;
-        border-radius: 8px;
+        width: 48px; height: 48px;
+        border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 16px;
+        font-size: 22px;
         flex-shrink: 0;
         transition: transform 0.2s;
     }
@@ -153,27 +161,27 @@
         min-width: 0;
     }
     .stat-tile-label {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 700;
         color: var(--text-3);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
     }
     .stat-tile-value {
-        font-size: 22px;
-        font-weight: 800;
+        font-size: 28px;
+        font-weight: 900;
         color: var(--text);
-        margin-top: 1px;
+        margin-top: 2px;
         line-height: 1.2;
     }
 
     .stat-tile::after {
         content: '→';
-        font-size: 14px;
+        font-size: 16px;
         color: var(--text-3);
         opacity: 0;
         transition: opacity 0.2s, transform 0.2s;
-        transform: translateX(-4px);
+        transform: translateX(-6px);
     }
     .stat-tile:hover::after {
         opacity: 1;
