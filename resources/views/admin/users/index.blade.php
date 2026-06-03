@@ -161,12 +161,18 @@
                 <input type="number" name="points_balance" id="modal-points" required min="0" style="width:100%; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--line-strong); background:var(--input-bg); color:var(--text); font-size:13.5px; outline:none;">
             </div>
             
-            <div class="field" style="margin-bottom:24px;">
+            <div class="field" style="margin-bottom:16px;">
                 <label class="font-bold" style="display:block; margin-bottom:6px; font-size:11px; color:var(--text-2); text-transform:uppercase; letter-spacing:0.5px;">Hak Akses / Role</label>
-                <select name="role" id="modal-role" required style="width:100%; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--line-strong); background:var(--input-bg); color:var(--text); font-size:13.5px; outline:none; cursor:pointer;">
+                <select name="role" id="modal-role" required onchange="togglePasswordVisibility()" style="width:100%; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--line-strong); background:var(--input-bg); color:var(--text); font-size:13.5px; outline:none; cursor:pointer;">
                     <option value="user">👤 User (Pengguna Mobile)</option>
                     <option value="admin">🛡️ Admin (Akses Panel Web)</option>
                 </select>
+            </div>
+
+            <div class="field" id="password-field-container" style="margin-bottom:24px; display:none;">
+                <label class="font-bold" style="display:block; margin-bottom:6px; font-size:11px; color:var(--text-2); text-transform:uppercase; letter-spacing:0.5px;">Password Baru</label>
+                <input type="password" name="password" id="modal-password" placeholder="Kosongkan jika tidak ingin diubah" style="width:100%; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--line-strong); background:var(--input-bg); color:var(--text); font-size:13.5px; outline:none;">
+                <small style="font-size:10px; color:var(--text-3); display:block; margin-top:4px;">Gunakan minimal 6 karakter. Sangat berguna untuk menyetel password pengguna Google yang naik kelas menjadi Admin.</small>
             </div>
             
             <div style="display:flex; justify-content:flex-end; gap:10px;">
@@ -180,6 +186,19 @@
 
 @push('scripts')
 <script>
+function togglePasswordVisibility() {
+    const roleSelect = document.getElementById('modal-role');
+    const pwdContainer = document.getElementById('password-field-container');
+    const pwdInput = document.getElementById('modal-password');
+    
+    if (roleSelect.value === 'admin') {
+        pwdContainer.style.display = 'block';
+    } else {
+        pwdContainer.style.display = 'none';
+        pwdInput.value = '';
+    }
+}
+
 function openEditModal(user) {
     const modal = document.getElementById('edit-user-modal');
     const form = document.getElementById('edit-user-form');
@@ -188,8 +207,10 @@ function openEditModal(user) {
     document.getElementById('modal-display-name').value = user.display_name;
     document.getElementById('modal-points').value = user.points_balance;
     document.getElementById('modal-role').value = user.role;
+    document.getElementById('modal-password').value = '';
     
     modal.style.display = 'flex';
+    togglePasswordVisibility();
 }
 
 function closeEditModal() {
