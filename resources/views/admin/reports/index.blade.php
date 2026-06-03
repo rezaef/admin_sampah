@@ -70,9 +70,11 @@
     .lightbox.open { display: flex; }
     .lightbox img { max-width: 90vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
     .lightbox-close {
-        position: absolute; top: 20px; right: 24px;
-        font-size: 36px; color: #fff; cursor: pointer; line-height: 1;
+        position: fixed; top: 20px; right: 24px;
+        font-size: 42px; color: #fff; cursor: pointer; line-height: 1;
+        z-index: 10000;
         transition: transform .15s;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
     .lightbox-close:hover { transform: scale(1.15); }
 
