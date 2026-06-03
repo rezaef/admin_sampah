@@ -65,6 +65,31 @@ Route::get('/delete-storage-link', function () {
 });
 
 Route::get('/clear-cache', function () {
+    // Recreate missing Laravel storage directories if they were deleted
+    $requiredDirs = [
+        storage_path(),
+        storage_path('app'),
+        storage_path('app/public'),
+        storage_path('app/public/reports'),
+        storage_path('framework'),
+        storage_path('framework/cache'),
+        storage_path('framework/cache/data'),
+        storage_path('framework/sessions'),
+        storage_path('framework/views'),
+        storage_path('logs'),
+    ];
+
+    $createdDirs = [];
+    foreach ($requiredDirs as $dir) {
+        if (!file_exists($dir)) {
+            if (@mkdir($dir, 0755, true)) {
+                $createdDirs[] = "Created: " . str_replace(base_path(), '', $dir);
+            } else {
+                $createdDirs[] = "Failed to create: " . str_replace(base_path(), '', $dir);
+            }
+        }
+    }
+
     $results = [];
     $commands = ['config:clear', 'route:clear', 'view:clear', 'cache:clear'];
     foreach ($commands as $cmd) {
@@ -75,7 +100,10 @@ Route::get('/clear-cache', function () {
             $results[] = "$cmd: Failed (" . $e->getMessage() . ")";
         }
     }
-    return '<h3>Laravel Cache Clear</h3>' . implode('<br>', $results);
+    
+    $dirMsg = count($createdDirs) > 0 ? '<h4>Storage Folders Status:</h4>' . implode('<br>', $createdDirs) . '<br>' : '';
+    
+    return '<h3>Laravel Cache Clear</h3>' . $dirMsg . '<h4>Artisan Commands:</h4>' . implode('<br>', $results);
 });
 
 // Fallback route to serve storage files if symlink is not possible
@@ -123,7 +151,7 @@ Route::get('/debug-images', function () {
     // Find all image files in storage and public directories
     $foundFiles = [];
     $scanDirs = [
-        storage_path('app/public'),
+        storage_path(), // Scan the ENTIRE storage folder recursively
         public_path(),
         base_path('../public_html'),
     ];
@@ -134,13 +162,51 @@ Route::get('/debug-images', function () {
                 $di = new RecursiveDirectoryIterator($dir);
                 foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
                     if (in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        $foundFiles[] = $filename;
+                        // Keep path relative to base_path for readability
+                        $foundFiles[] = str_replace(base_path(), '', $filename);
                     }
                 }
             } catch (\Exception $e) {
                 $foundFiles[] = 'Error scanning ' . $dir . ': ' . $e->getMessage();
             }
         }
+    }
+
+    // Try to write a test file to see if upload directories are writeable
+    $writeTests = [];
+    $testDirs = [
+        'storage' => storage_path(),
+        'storage_app' => storage_path('app'),
+        'storage_app_public' => storage_path('app/public'),
+        'storage_app_public_reports' => storage_path('app/public/reports'),
+        'public' => public_path(),
+    ];
+
+    foreach ($testDirs as $name => $path) {
+        if (!file_exists($path)) {
+            // Try to create it if it's public/reports
+            if ($name === 'storage_app_public_reports') {
+                @mkdir($path, 0755, true);
+            }
+        }
+        $exists = file_exists($path);
+        $writable = $exists ? is_writable($path) : false;
+        
+        $writeSuccessful = false;
+        if ($writable) {
+            $testFile = $path . '/test_write.txt';
+            if (@file_put_contents($testFile, 'test') !== false) {
+                $writeSuccessful = true;
+                @unlink($testFile);
+            }
+        }
+        
+        $writeTests[$name] = [
+            'path' => $path,
+            'exists' => $exists,
+            'writable' => $writable,
+            'write_test_successful' => $writeSuccessful,
+        ];
     }
 
     $results = $reports->map(function ($report) {
@@ -162,6 +228,7 @@ Route::get('/debug-images', function () {
     return response()->json([
         'reports' => $results,
         'all_image_files_on_server' => $foundFiles,
+        'diagnostics' => $writeTests,
         'paths' => [
             'base_path' => base_path(),
             'storage_path' => storage_path(),

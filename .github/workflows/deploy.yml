@@ -30,4 +30,4 @@ jobs:
         REMOTE_USER: ${{ secrets.SSH_USERNAME }}
         REMOTE_PORT: ${{ secrets.SSH_PORT }}
         TARGET: "/home/itanisar/sampahdetector.my.id/" # Path di cPanel
-        EXCLUDE: "/.git/, /node_modules/, /.env" # Jangan timpa .env di server
+        EXCLUDE: "/.git/, /node_modules/, /.env, /storage/" # Jangan timpa .env dan storage (foto laporan) di server
