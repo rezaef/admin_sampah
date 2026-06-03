@@ -7,10 +7,12 @@
 <style>
     .chart-wrap {
         position: relative;
-        height: 200px;
+        flex: 1;
+        min-height: 200px;
         display: flex;
         justify-content: center;
         align-items: center;
+        margin: 12px 0;
     }
     .donut-center {
         position: absolute; top: 50%; left: 50%;
