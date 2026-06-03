@@ -13,98 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin/login');
 
-Route::get('/link-storage', function () {
-    $target = storage_path('app/public');
-    $link = public_path('storage');
-    
-    if (file_exists($link) || is_link($link)) {
-        return 'Tautan storage sudah ada di server. Jika gambar tidak muncul, silakan akses /delete-storage-link terlebih dahulu untuk membersihkannya.';
-    }
-    
-    if (!function_exists('symlink')) {
-        return 'Fungsi PHP symlink() dinonaktifkan oleh penyedia hosting Anda. Silakan akses /delete-storage-link agar sistem menggunakan rute fallback otomatis untuk menampilkan gambar.';
-    }
-    
-    try {
-        if (symlink($target, $link)) {
-            return 'Tautan storage berhasil dibuat via PHP symlink!';
-        }
-    } catch (\Exception $e) {
-        return 'Gagal membuat symlink: ' . $e->getMessage() . '. Silakan jalankan /delete-storage-link untuk mengaktifkan fallback.';
-    }
-    
-    return 'Gagal membuat tautan storage.';
-});
 
-Route::get('/delete-storage-link', function () {
-    $link = public_path('storage');
-    
-    if (!file_exists($link) && !is_link($link)) {
-        return 'Tidak ada folder atau tautan storage yang perlu dihapus.';
-    }
-    
-    try {
-        // Force delete if it is a symlink or file
-        if (is_link($link) || file_exists($link)) {
-            // PHP native unlink handles symlinks
-            @unlink($link);
-        }
-        
-        if (file_exists($link) && is_dir($link)) {
-            @rmdir($link);
-        }
-        
-        if (!file_exists($link) && !is_link($link)) {
-            return 'Folder/tautan storage lama berhasil dihapus! Sekarang rute fallback otomatis aktif untuk menampilkan gambar.';
-        }
-        
-        return 'Gagal menghapus folder storage secara otomatis. Silakan hapus folder "public/storage" secara manual melalui File Manager di cPanel/hosting Anda.';
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage();
-    }
-});
-
-Route::get('/clear-cache', function () {
-    // Recreate missing Laravel storage directories if they were deleted
-    $requiredDirs = [
-        storage_path(),
-        storage_path('app'),
-        storage_path('app/public'),
-        storage_path('app/public/reports'),
-        storage_path('framework'),
-        storage_path('framework/cache'),
-        storage_path('framework/cache/data'),
-        storage_path('framework/sessions'),
-        storage_path('framework/views'),
-        storage_path('logs'),
-    ];
-
-    $createdDirs = [];
-    foreach ($requiredDirs as $dir) {
-        if (!file_exists($dir)) {
-            if (@mkdir($dir, 0755, true)) {
-                $createdDirs[] = "Created: " . str_replace(base_path(), '', $dir);
-            } else {
-                $createdDirs[] = "Failed to create: " . str_replace(base_path(), '', $dir);
-            }
-        }
-    }
-
-    $results = [];
-    $commands = ['config:clear', 'route:clear', 'view:clear', 'cache:clear'];
-    foreach ($commands as $cmd) {
-        try {
-            \Illuminate\Support\Facades\Artisan::call($cmd);
-            $results[] = "$cmd: Success";
-        } catch (\Exception $e) {
-            $results[] = "$cmd: Failed (" . $e->getMessage() . ")";
-        }
-    }
-    
-    $dirMsg = count($createdDirs) > 0 ? '<h4>Storage Folders Status:</h4>' . implode('<br>', $createdDirs) . '<br>' : '';
-    
-    return '<h3>Laravel Cache Clear</h3>' . $dirMsg . '<h4>Artisan Commands:</h4>' . implode('<br>', $results);
-});
 
 // Fallback route to serve storage files if symlink is not possible
 Route::get('/storage/{path}', function ($path) {
@@ -180,15 +89,6 @@ Route::prefix('admin')->group(function () {
         Route::put('/challenges/{challenge}', [ChallengeController::class, 'update'])->name('admin.challenges.update');
         Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy'])->name('admin.challenges.destroy');
 
-        // Route untuk menjalankan seeder via browser (Aman karena di dalam middleware admin auth)
-        Route::get('/run-seeders', function () {
-            try {
-                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'RewardSeeder']);
-                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'ChallengeSeeder']);
-                return 'Seeders (RewardSeeder & ChallengeSeeder) berhasil dijalankan via web!';
-            } catch (\Exception $e) {
-                return 'Gagal menjalankan seeder: ' . $e->getMessage();
-            }
-        });
+
     });
 });
