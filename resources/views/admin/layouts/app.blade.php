@@ -808,6 +808,9 @@
             letter-spacing: 0.2px;
             white-space: nowrap;
         }
+        .clock-sweep-ring {
+            /* rotation handled via SVG transform attribute */
+        }
 
         /* Logout button style */
         .btn-logout {
@@ -1037,10 +1040,14 @@
                         <div class="clock-pulse-ring"></div>
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="10" cy="10" r="8.5" stroke="var(--primary)" stroke-width="1.5" opacity="0.3"/>
-                            <circle cx="10" cy="10" r="8.5" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="53.4" stroke-dashoffset="53.4" id="clock-sweep" style="transition:stroke-dashoffset 1s linear;transform-origin:center;transform:rotate(-90deg);"/>
+                            <circle cx="10" cy="10" r="8.5" stroke="var(--primary)" stroke-width="1.5"
+                                stroke-dasharray="53.4" stroke-dashoffset="53.4"
+                                id="clock-sweep"
+                                transform="rotate(-90, 10, 10)"
+                                style="transition: stroke-dashoffset 0.95s linear;"/>
                             <circle cx="10" cy="10" r="2" fill="var(--primary)"/>
-                            <line id="clock-hand-m" x1="10" y1="10" x2="10" y2="3.5" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round" style="transform-origin:10px 10px;"/>
-                            <line id="clock-hand-h" x1="10" y1="10" x2="10" y2="5.5" stroke="var(--text)" stroke-width="2" stroke-linecap="round" style="transform-origin:10px 10px;"/>
+                            <line id="clock-hand-m" x1="10" y1="10" x2="10" y2="3.5" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round"/>
+                            <line id="clock-hand-h" x1="10" y1="10" x2="10" y2="5.5" stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div class="clock-body">
@@ -1199,20 +1206,21 @@
         const dateEl = document.getElementById('clock-date');
         if (dateEl) dateEl.textContent = `${DAYS[now.getDay()]} · ${now.getDate()} ${MONTHS[now.getMonth()]}`;
 
-        // SVG clock hands
+        // SVG clock hands — use SVG native rotate(deg, cx, cy) for correct pivot
         const totalMins = now.getHours() * 60 + now.getMinutes();
         const degH = (totalMins / 720) * 360;
         const degM = (now.getMinutes() / 60) * 360 + (now.getSeconds() / 60) * 6;
         const handH = document.getElementById('clock-hand-h');
         const handM = document.getElementById('clock-hand-m');
-        if (handH) handH.style.transform = `rotate(${degH}deg)`;
-        if (handM) handM.style.transform = `rotate(${degM}deg)`;
+        if (handH) handH.setAttribute('transform', `rotate(${degH}, 10, 10)`);
+        if (handM) handM.setAttribute('transform', `rotate(${degM}, 10, 10)`);
 
-        // Sweeping second ring (circumference ≈ 53.4)
+        // Sweep second ring — dashoffset 53.4→0 as seconds go 0→60
         const sweep = document.getElementById('clock-sweep');
         if (sweep) {
-            const progress = now.getSeconds() / 60;
-            sweep.style.strokeDashoffset = 53.4 * (1 - progress);
+            const sec = now.getSeconds();
+            // At sec=0: offset=53.4 (ring empty). At sec=59: offset≈0.89 (ring almost full).
+            sweep.style.strokeDashoffset = 53.4 - (sec / 60) * 53.4;
         }
     }
     tickClock();
