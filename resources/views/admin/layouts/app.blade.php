@@ -753,6 +753,62 @@
         }
         .row-new { animation: highlight-row 2s ease-out forwards; }
 
+        /* ── Digital Clock Widget ── */
+        .clock-widget {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px 5px 8px;
+            background: var(--card);
+            border: var(--glass-border);
+            border-radius: 99px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .clock-icon-wrap {
+            position: relative;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .clock-icon-wrap svg {
+            display: block;
+        }
+        .clock-pulse-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            border: 1.5px solid var(--primary);
+            opacity: 0;
+            animation: clock-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes clock-ping {
+            0%   { transform: scale(0.85); opacity: 0.5; }
+            80%, 100% { transform: scale(1.5); opacity: 0; }
+        }
+        .clock-body {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .clock-time {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+        .clock-time .clock-seconds {
+            color: var(--primary);
+        }
+        .clock-date {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-3);
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
         /* Logout button style */
         .btn-logout {
             background: none;
@@ -976,9 +1032,21 @@
                     <span class="live-dot"></span>
                     <span id="live-status">Live</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:5px;color:var(--text-2);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">
-                    <span style="font-size:15px">🕐</span>
-                    <span id="last-updated" style="letter-spacing:.3px;min-width:52px"></span>
+                <div class="clock-widget" aria-label="Waktu sekarang">
+                    <div class="clock-icon-wrap">
+                        <div class="clock-pulse-ring"></div>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="10" cy="10" r="8.5" stroke="var(--primary)" stroke-width="1.5" opacity="0.3"/>
+                            <circle cx="10" cy="10" r="8.5" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="53.4" stroke-dashoffset="53.4" id="clock-sweep" style="transition:stroke-dashoffset 1s linear;transform-origin:center;transform:rotate(-90deg);"/>
+                            <circle cx="10" cy="10" r="2" fill="var(--primary)"/>
+                            <line id="clock-hand-m" x1="10" y1="10" x2="10" y2="3.5" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round" style="transform-origin:10px 10px;"/>
+                            <line id="clock-hand-h" x1="10" y1="10" x2="10" y2="5.5" stroke="var(--text)" stroke-width="2" stroke-linecap="round" style="transform-origin:10px 10px;"/>
+                        </svg>
+                    </div>
+                    <div class="clock-body">
+                        <div class="clock-time" id="clock-hhmm">--:--<span class="clock-seconds">:--</span></div>
+                        <div class="clock-date" id="clock-date">--- · ---</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1114,14 +1182,38 @@
     });
 
     // ── Live clock — update setiap detik ──
+    const DAYS   = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
     function tickClock() {
-        const el = document.getElementById('last-updated');
-        if (!el) return;
-        const now = new Date();
-        const hh = now.getHours().toString().padStart(2,'0');
-        const mm = now.getMinutes().toString().padStart(2,'0');
-        const ss = now.getSeconds().toString().padStart(2,'0');
-        el.textContent = `${hh}:${mm}:${ss}`;
+        const now  = new Date();
+        const hh   = now.getHours().toString().padStart(2,'0');
+        const mm   = now.getMinutes().toString().padStart(2,'0');
+        const ss   = now.getSeconds().toString().padStart(2,'0');
+
+        // Time display
+        const timeEl = document.getElementById('clock-hhmm');
+        if (timeEl) timeEl.innerHTML = `${hh}:${mm}<span class="clock-seconds">:${ss}</span>`;
+
+        // Date display
+        const dateEl = document.getElementById('clock-date');
+        if (dateEl) dateEl.textContent = `${DAYS[now.getDay()]} · ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+
+        // SVG clock hands
+        const totalMins = now.getHours() * 60 + now.getMinutes();
+        const degH = (totalMins / 720) * 360;
+        const degM = (now.getMinutes() / 60) * 360 + (now.getSeconds() / 60) * 6;
+        const handH = document.getElementById('clock-hand-h');
+        const handM = document.getElementById('clock-hand-m');
+        if (handH) handH.style.transform = `rotate(${degH}deg)`;
+        if (handM) handM.style.transform = `rotate(${degM}deg)`;
+
+        // Sweeping second ring (circumference ≈ 53.4)
+        const sweep = document.getElementById('clock-sweep');
+        if (sweep) {
+            const progress = now.getSeconds() / 60;
+            sweep.style.strokeDashoffset = 53.4 * (1 - progress);
+        }
     }
     tickClock();
     setInterval(tickClock, 1000);
