@@ -91,7 +91,34 @@
             font-size: 14px;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
-            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ── Global smooth theme transition ── */
+        .theme-transitioning,
+        .theme-transitioning *,
+        .theme-transitioning *::before,
+        .theme-transitioning *::after {
+            transition:
+                background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* ── Theme flash overlay ── */
+        #theme-flash {
+            position: fixed;
+            inset: 0;
+            z-index: 999998;
+            pointer-events: none;
+            opacity: 0;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.18) 0%, transparent 70%);
+            transition: opacity 0.25s ease;
+        }
+        #theme-flash.active {
+            opacity: 1;
         }
         a { color: inherit; text-decoration: none; }
         input, textarea, select, button { font-family: inherit; }
@@ -855,6 +882,7 @@
     @stack('styles')
 </head>
 <body>
+<div id="theme-flash" aria-hidden="true"></div>
 <div class="shell">
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <aside class="sidebar" id="sidebar">
@@ -1170,11 +1198,27 @@
         themeToggleBtn.addEventListener('click', () => {
             const current = document.documentElement.getAttribute('data-theme') || 'dark';
             const next = current === 'dark' ? 'light' : 'dark';
-            
+
+            // 1. Flash overlay — brief white ripple
+            const flash = document.getElementById('theme-flash');
+            if (flash) {
+                flash.classList.add('active');
+                setTimeout(() => flash.classList.remove('active'), 200);
+            }
+
+            // 2. Enable global smooth transition on ALL elements
+            document.documentElement.classList.add('theme-transitioning');
+
+            // 3. Apply the new theme
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('admin-theme', next);
             updateToggleIcon(next);
-            
+
+            // 4. Remove transition class after animation completes
+            setTimeout(() => {
+                document.documentElement.classList.remove('theme-transitioning');
+            }, 500);
+
             // Dispatch dynamic window event for child scripts (e.g. donut chart) to respond
             window.dispatchEvent(new Event('theme-changed'));
         });
