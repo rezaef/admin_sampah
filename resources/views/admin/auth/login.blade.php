@@ -66,11 +66,12 @@
         .orb {
             position: fixed;
             border-radius: 50%;
-            filter: blur(100px);
+            filter: blur(80px);
             opacity: 0;
             pointer-events: none;
             z-index: 0;
             animation: orb-appear 2s ease-out forwards;
+            will-change: transform;
         }
         .orb-1 {
             width: 500px; height: 500px;
@@ -119,7 +120,7 @@
             z-index: 1;
             pointer-events: none;
             overflow: hidden;
-            contain: layout style;
+            contain: strict;
         }
         .particle-emoji {
             position: absolute;
@@ -154,7 +155,7 @@
             opacity: 0;
             transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
             will-change: transform;
-            contain: layout style;
+            contain: strict;
         }
         body:hover .interactive-glow {
             opacity: 1;
@@ -561,36 +562,45 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // ─── Shared Mouse State ───
+            // ─── Shared Mouse State (raw, updated by mousemove) ───
             let mouseX = window.innerWidth * 0.5;
             let mouseY = window.innerHeight * 0.5;
+            let lastMouseX = mouseX;
+            let lastMouseY = mouseY;
 
-            // Single passive mousemove listener for all systems
             document.body.addEventListener('mousemove', (e) => {
                 mouseX = e.clientX;
                 mouseY = e.clientY;
             }, { passive: true });
 
-            // ─── Glow State ───
-            const glow = document.getElementById('interactive-glow');
-            let glowX = mouseX;
-            let glowY = mouseY;
+            // ─── Adaptive Particle Count (by screen width) ───
+            const PARTICLE_COUNT = window.innerWidth < 480 ? 12
+                                 : window.innerWidth < 768 ? 18
+                                 : 28;
 
-            // ─── Physics-Based Emoji Particle System ───
-            const particlesContainer = document.getElementById('particles');
-            const PARTICLE_COUNT = 28;
             const trashEmojis = ['🗑️', '♻️', '🥫', '🍌', '🧃', '📦', '🥤', '🍂', '🧴', '🛒', '💚', '🌿', '🍃', '🧹', '🗞️'];
-            const CURSOR_RADIUS = 120;
-            const CURSOR_RADIUS_SQ = CURSOR_RADIUS * CURSOR_RADIUS; // Pre-computed to avoid sqrt
-            const REPULSION_FORCE = 3.5;
-            const FRICTION = 0.94;
+            const CURSOR_RADIUS    = 120;
+            const CURSOR_RADIUS_SQ = CURSOR_RADIUS * CURSOR_RADIUS;
+            const REPULSION_FORCE  = 3.5;
+            const FRICTION         = 0.94;
+            const FLOAT_GRAVITY    = 0.01;
+            const MIN_ROTATION_SPEED = 0.003; // skip damping below threshold
+
+            // ─── Glow ───
+            const glow = document.getElementById('interactive-glow');
+            let glowX = mouseX, glowY = mouseY;
+            const GLOW_LERP = 0.07;
+            const GLOW_OFFSET = 350;
+
+            // ─── Particle Pool ───
+            const particlesContainer = document.getElementById('particles');
             const particles = [];
 
             function initParticle(p, randomY) {
                 const w = window.innerWidth;
                 const h = window.innerHeight;
                 p.x = Math.random() * w;
-                p.y = randomY ? (Math.random() * h) : (h + 40 + Math.random() * 100);
+                p.y = randomY ? Math.random() * h : h + 40 + Math.random() * 100;
                 p.vx = (Math.random() - 0.5) * 0.3;
                 p.vy = -(0.4 + Math.random() * 0.8);
                 p.size = 18 + Math.random() * 16;
@@ -598,13 +608,15 @@
                 p.rotationSpeed = (Math.random() - 0.5) * 1.2;
                 p.wobblePhase = Math.random() * Math.PI * 2;
                 p.wobbleSpeed = 0.01 + Math.random() * 0.02;
-                p.wobbleAmp = 0.3 + Math.random() * 0.5;
+                p.wobbleAmp  = 0.3 + Math.random() * 0.5;
                 p.baseOpacity = 0.25 + Math.random() * 0.3;
                 p.opacity = randomY ? p.baseOpacity : 0;
                 p.fadeIn = !randomY;
                 p.scale = randomY ? 1 : 0.5;
                 p.nearCursor = false;
-                // Set fontSize once — it never changes after init
+                // Cached last-written values to skip redundant DOM writes
+                p._lastTransform = '';
+                p._lastOpacity   = -1;
                 p.el.style.fontSize = `${p.size}px`;
             }
 
@@ -618,18 +630,29 @@
                 return p;
             }
 
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                particles.push(createParticleObj());
-            }
+            for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticleObj());
 
-            // ─── Single Master Animation Loop (glow + particles) ───
+            // ─── Page Visibility API — pause loop when tab hidden ───
+            let paused = false;
+            document.addEventListener('visibilitychange', () => {
+                paused = document.hidden;
+                if (!paused) requestAnimationFrame(masterLoop);
+            });
+
+            // ─── Master rAF Loop ───
             function masterLoop() {
-                // ── Update Glow (lerp toward cursor) ──
-                glowX += (mouseX - glowX) * 0.08;
-                glowY += (mouseY - glowY) * 0.08;
-                glow.style.transform = `translate3d(${glowX - 350}px, ${glowY - 350}px, 0)`;
+                if (paused) return;
 
-                // ── Update Particles ──
+                // ── Glow: only write if cursor moved meaningfully ──
+                const glowDeltaX = mouseX - glowX;
+                const glowDeltaY = mouseY - glowY;
+                if (Math.abs(glowDeltaX) > 0.3 || Math.abs(glowDeltaY) > 0.3) {
+                    glowX += glowDeltaX * GLOW_LERP;
+                    glowY += glowDeltaY * GLOW_LERP;
+                    glow.style.transform = `translate3d(${(glowX - GLOW_OFFSET)|0}px,${(glowY - GLOW_OFFSET)|0}px,0)`;
+                }
+
+                // ── Particles ──
                 const w = window.innerWidth;
                 const h = window.innerHeight;
                 const fadeZone = h * 0.15;
@@ -639,27 +662,27 @@
                 for (let i = 0, len = particles.length; i < len; i++) {
                     const p = particles[i];
 
-                    // Fade in new particles
+                    // Fade-in phase
                     if (p.fadeIn) {
                         p.opacity = Math.min(p.opacity + 0.005, p.baseOpacity);
-                        p.scale = Math.min(p.scale + 0.008, 1);
+                        p.scale   = Math.min(p.scale   + 0.008, 1);
                         if (p.opacity >= p.baseOpacity) p.fadeIn = false;
                     }
 
-                    // Wobble (organic sway)
+                    // Organic wobble
                     p.wobblePhase += p.wobbleSpeed;
                     p.vx += Math.sin(p.wobblePhase) * p.wobbleAmp * 0.02;
 
-                    // Cursor interaction: use squared distance (skip sqrt)
+                    // Cursor repulsion (squared distance — no sqrt unless inside radius)
                     const dx = p.x - mx;
                     const dy = p.y - my;
-                    const distSq = dx * dx + dy * dy;
-                    const wasNear = p.nearCursor;
+                    const distSq   = dx * dx + dy * dy;
+                    const wasNear  = p.nearCursor;
 
                     if (distSq < CURSOR_RADIUS_SQ && distSq > 0) {
-                        const dist = Math.sqrt(distSq); // sqrt only when needed
-                        const force = (1 - dist / CURSOR_RADIUS) * REPULSION_FORCE;
-                        const invDist = 1 / dist; // single division
+                        const dist    = Math.sqrt(distSq);
+                        const force   = (1 - dist / CURSOR_RADIUS) * REPULSION_FORCE;
+                        const invDist = 1 / dist;
                         p.vx += dx * invDist * force;
                         p.vy += dy * invDist * force;
                         p.rotationSpeed += (Math.random() - 0.5) * 2;
@@ -668,76 +691,97 @@
                         p.nearCursor = false;
                     }
 
-                    // Toggle glow class only on state change
+                    // Class toggle only on state change (avoids style recalc every frame)
                     if (p.nearCursor !== wasNear) {
                         p.el.classList.toggle('near-cursor', p.nearCursor);
                     }
 
-                    // Apply velocity with friction
+                    // Velocity integration
                     p.vx *= FRICTION;
                     p.vy *= FRICTION;
-                    p.vy -= 0.01; // gentle upward float
+                    p.vy -= FLOAT_GRAVITY;
 
                     p.x += p.vx;
                     p.y += p.vy;
                     p.rotation += p.rotationSpeed;
-                    p.rotationSpeed *= 0.995;
 
-                    // Recycle off-screen particles
+                    // Skip multiply when rotation is already near-zero
+                    if (Math.abs(p.rotationSpeed) > MIN_ROTATION_SPEED) {
+                        p.rotationSpeed *= 0.995;
+                    }
+
+                    // Recycle off-screen
                     if (p.y < -60 || p.x < -80 || p.x > w + 80) {
                         initParticle(p, false);
                         p.el.textContent = trashEmojis[Math.floor(Math.random() * trashEmojis.length)];
+                        continue; // skip DOM write for this frame
                     }
 
-                    // Fade out near top
+                    // Top-edge fade
+                    let targetOpacity = p.baseOpacity;
                     if (p.y < fadeZone && !p.fadeIn) {
-                        p.opacity = p.baseOpacity * (p.y / fadeZone);
+                        targetOpacity = p.baseOpacity * (p.y / fadeZone);
+                    }
+                    p.opacity = p.fadeIn
+                        ? Math.min(p.opacity + 0.005, p.baseOpacity)
+                        : targetOpacity;
+
+                    // ── Batched DOM writes: only write when value changed ──
+                    // Use integer rounding for transform strings (fewer unique strings = less GC)
+                    const tx = p.x | 0;
+                    const ty = p.y | 0;
+                    const tr = (p.rotation % 360) | 0;
+                    const ts = Math.round(p.scale * 100) / 100;
+                    const newTransform = `translate3d(${tx}px,${ty}px,0) rotate(${tr}deg) scale(${ts})`;
+
+                    if (newTransform !== p._lastTransform) {
+                        p.el.style.transform = newTransform;
+                        p._lastTransform = newTransform;
                     }
 
-                    // GPU-accelerated transform via translate3d
-                    p.el.style.transform = `translate3d(${p.x}px,${p.y}px,0) rotate(${p.rotation}deg) scale(${p.scale})`;
-                    p.el.style.opacity = p.opacity > 0 ? p.opacity : 0;
+                    const op = p.opacity > 0 ? Math.round(p.opacity * 100) / 100 : 0;
+                    if (op !== p._lastOpacity) {
+                        p.el.style.opacity = op;
+                        p._lastOpacity = op;
+                    }
                 }
 
                 requestAnimationFrame(masterLoop);
             }
             requestAnimationFrame(masterLoop);
 
-            // ─── Button Ripple Effect ───
+            // ─── Button Ripple ───
             const btn = document.getElementById('btn-login');
             btn.addEventListener('click', function(e) {
-                const rect = this.getBoundingClientRect();
+                const rect   = this.getBoundingClientRect();
                 const ripple = document.createElement('span');
                 ripple.classList.add('ripple');
                 const size = Math.max(rect.width, rect.height);
-                ripple.style.width = ripple.style.height = `${size}px`;
-                ripple.style.left = `${e.clientX - rect.left - size / 2}px`;
-                ripple.style.top = `${e.clientY - rect.top - size / 2}px`;
+                ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px`;
                 this.appendChild(ripple);
-                ripple.addEventListener('animationend', () => ripple.remove());
+                ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
             });
 
             // ─── Tilt Effect on Login Box ───
             const loginBox = document.querySelector('.login-box');
+            let tiltRaf = null;
+
             loginBox.addEventListener('mousemove', (e) => {
-                const rect = loginBox.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width * 0.5;
-                const centerY = rect.height * 0.5;
-
-                const rotateX = ((y - centerY) / centerY) * -3;
-                const rotateY = ((x - centerX) / centerX) * 3;
-
-                loginBox.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
+                if (tiltRaf) return; // throttle to one rAF
+                tiltRaf = requestAnimationFrame(() => {
+                    const rect    = loginBox.getBoundingClientRect();
+                    const rotateX = (((e.clientY - rect.top)  / rect.height) - 0.5) * -6;
+                    const rotateY = (((e.clientX - rect.left) / rect.width)  - 0.5) *  6;
+                    loginBox.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
+                    tiltRaf = null;
+                });
             }, { passive: true });
 
             loginBox.addEventListener('mouseleave', () => {
-                loginBox.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
-                loginBox.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
-                setTimeout(() => {
-                    loginBox.style.transition = '';
-                }, 500);
+                if (tiltRaf) { cancelAnimationFrame(tiltRaf); tiltRaf = null; }
+                loginBox.style.transition = 'transform 0.5s cubic-bezier(0.23,1,0.32,1)';
+                loginBox.style.transform  = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+                setTimeout(() => { loginBox.style.transition = ''; }, 500);
             });
         });
     </script>
