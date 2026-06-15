@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Google\Client as GoogleClient;
 use Illuminate\Support\Str;
@@ -132,27 +133,48 @@ class AuthController extends Controller
     public function google(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'id_token' => ['required', 'string'],
+            'id_token' => ['nullable', 'string'],
+            'access_token' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
             'display_name' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $client = new GoogleClient([
-            'client_id' => config('services.google.web_client_id'),
-        ]);
-
-        $payload = $client->verifyIdToken($data['id_token']);
-
-        if (! $payload) {
-            return response()->json([
-                'message' => 'ID token Google tidak valid.',
-            ], 401);
+        if (empty($data['id_token']) && empty($data['access_token'])) {
+            return response()->json(['message' => 'Token Google diperlukan.'], 422);
         }
 
-        $googleId = $payload['sub'] ?? null;
-        $email = strtolower($payload['email'] ?? $data['email'] ?? '');
-        $displayName = $payload['name'] ?? $data['display_name'] ?? 'Pengguna';
-        $emailVerified = (bool) ($payload['email_verified'] ?? false);
+        if (! empty($data['id_token'])) {
+            // Mobile flow: verify via id_token
+            $client = new GoogleClient([
+                'client_id' => config('services.google.web_client_id'),
+            ]);
+
+            $payload = $client->verifyIdToken($data['id_token']);
+
+            if (! $payload) {
+                return response()->json(['message' => 'ID token Google tidak valid.'], 401);
+            }
+
+            $googleId = $payload['sub'] ?? null;
+            $email = strtolower($payload['email'] ?? $data['email'] ?? '');
+            $displayName = $payload['name'] ?? $data['display_name'] ?? 'Pengguna';
+            $emailVerified = (bool) ($payload['email_verified'] ?? false);
+        } else {
+            // Web flow: verify via access_token using Google userinfo endpoint
+            $response = Http::get('https://www.googleapis.com/oauth2/v3/userinfo', [
+                'access_token' => $data['access_token'],
+            ]);
+
+            if (! $response->successful()) {
+                return response()->json(['message' => 'Access token Google tidak valid.'], 401);
+            }
+
+            $info = $response->json();
+            $googleId = $info['sub'] ?? null;
+            $email = strtolower($info['email'] ?? $data['email'] ?? '');
+            $displayName = $info['name'] ?? $data['display_name'] ?? 'Pengguna';
+            $emailVerified = (bool) ($info['email_verified'] ?? false);
+        }
 
         if (! $googleId || ! $email) {
             return response()->json([
